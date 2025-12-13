@@ -1,0 +1,4410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Agutech Mini Zoom – Enhanced Screen-Share Platform</title>
+    <style>
+        body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background: #00bfff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #333;
+}
+h2, h3, h4 {
+    color: #222;
+    margin: 10px 0;
+    font-weight: bold;
+}
+/* ENHANCED COUNTDOWN TIMER STYLES */
+#meetingCountdownTimer {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2000;
+    display: none;
+    padding: 15px 30px;
+    border-radius: 25px;
+    font-size: 18px;
+    font-weight: bold;
+    color: white;
+    text-align: center;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    border: 3px solid rgba(255,255,255,0.3);
+    backdrop-filter: blur(10px);
+    min-width: 250px;
+    transition: all 0.3s ease;
+}
+/* Timer color states */
+.timer-normal {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    animation: gentlePulse 2s infinite;
+}
+.timer-warning {
+    background: linear-gradient(135deg, #fd7e14, #ffc107);
+    animation: moderatePulse 1.5s infinite;
+}
+.timer-critical {
+    background: linear-gradient(135deg, #dc3545, #e74c3c);
+    animation: rapidPulse 0.8s infinite;
+}
+@keyframes gentlePulse {
+    0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.9; }
+    50% { transform: translateX(-50%) scale(1.02); opacity: 1; }
+}
+@keyframes moderatePulse {
+    0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.85; }
+    50% { transform: translateX(-50%) scale(1.05); opacity: 1; }
+}
+@keyframes rapidPulse {
+    0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.8; }
+    50% { transform: translateX(-50%) scale(1.08); opacity: 1; }
+}
+/* Mobile responsive timer */
+@media (max-width: 768px) {
+    #meetingCountdownTimer {
+        font-size: 14px;
+        padding: 10px 20px;
+        min-width: 200px;
+        top: 10px;
+    }
+}
+/* ENHANCED Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 3000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.6);
+    backdrop-filter: blur(3px);
+}
+.modal-content {
+    background-color: #ccccff;
+    margin: 5% auto;
+    padding: 30px;
+    border-radius: 15px;
+    width: 400px;
+    max-width: 90%;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+    border: 1px solid #e0d4ff;
+    position: relative;
+    z-index: 3001;
+}
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    position: absolute;
+    right: 15px;
+    top: 10px;
+    transition: all 0.3s ease;
+}
+.close:hover {
+    color: #dc3545;
+    transform: scale(1.1);
+}
+.password-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.password-toggle {
+    position: absolute;
+    right: 10px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 14px;
+    color: #666;
+    transition: color 0.3s ease;
+}
+.password-toggle:hover {
+    color: #007bff;
+}
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    margin: 10px 0;
+}
+.checkbox-container input[type="checkbox"] {
+    margin-right: 8px;
+    width: auto;
+}
+/* Custom Time Picker Styles */
+.custom-time-picker {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 15px;
+}
+.time-select {
+    padding: 8px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 16px;
+    background: white;
+    transition: border-color 0.3s ease;
+}
+.time-select:focus {
+    border-color: #007bff;
+    outline: none;
+}
+.time-ok-btn {
+    background: #28a745;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-left: 10px;
+    transition: all 0.3s ease;
+}
+.time-ok-btn:hover {
+    background: #218838;
+    transform: translateY(-1px);
+}
+/* Audio Settings Popup */
+#audioSettingsPopup {
+    position: fixed;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 350px;
+    height: 400px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 2px solid #dee2e6;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+    z-index: 1500;
+    display: none;
+    flex-direction: column;
+    cursor: move;
+}
+#audioSettingsPopup .audio-header {
+    background: #dee2e6;
+    padding: 15px;
+    border-radius: 10px 10px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    cursor: move;
+}
+#audioSettingsPopup .audio-header h4 {
+    margin: 0;
+    color: #333;
+}
+#audioSettingsPopup .audio-close {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+#audioSettingsPopup .audio-close:hover {
+    transform: scale(1.1);
+}
+.audio-controls {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+}
+.audio-controls h5 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 16px;
+    text-align: center;
+}
+.volume-control {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 20px 0;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+.volume-control label {
+    font-size: 14px;
+    font-weight: bold;
+    margin: 0;
+    color: #333;
+}
+.volume-slider-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.volume-slider {
+    flex: 1;
+    height: 6px;
+    border-radius: 5px;
+    background: #ddd;
+    outline: none;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+.volume-slider:hover {
+    opacity: 1;
+}
+.volume-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #4caf50;
+    cursor: pointer;
+}
+.volume-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #4caf50;
+    cursor: pointer;
+}
+.volume-value {
+    min-width: 40px;
+    text-align: center;
+    font-weight: bold;
+    color: #4caf50;
+}
+/* Host Controls Popup */
+#hostControlsPopup {
+    position: fixed;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 300px;
+    height: 350px;
+    background: #e3f2fd;
+    border-radius: 12px;
+    border: 2px solid #2196f3;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+    z-index: 1500;
+    display: none;
+    flex-direction: column;
+    cursor: move;
+}
+#hostControlsPopup .controls-header {
+    background: #2196f3;
+    padding: 15px;
+    border-radius: 10px 10px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    cursor: move;
+}
+#hostControlsPopup .controls-header h4 {
+    margin: 0;
+    color: white;
+}
+#hostControlsPopup .controls-close {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+#hostControlsPopup .controls-close:hover {
+    transform: scale(1.1);
+}
+.host-controls-content {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+}
+.host-controls-content button {
+    width: 100%;
+    margin: 8px 0;
+    padding: 12px;
+    font-size: 14px;
+    border-radius: 6px;
+}
+/* Participants Popup */
+#participantsPopup {
+    position: fixed;
+    right: 380px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 300px;
+    height: 400px;
+    background: #f0f0f0;
+    border-radius: 12px;
+    border: 2px solid #17a2b8;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+    z-index: 1500;
+    display: none;
+    flex-direction: column;
+    cursor: move;
+}
+#participantsPopup .participants-header {
+    background: #17a2b8;
+    padding: 15px;
+    border-radius: 10px 10px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    cursor: move;
+}
+#participantsPopup .participants-header h4 {
+    margin: 0;
+    color: white;
+}
+#participantsPopup .participants-close {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+#participantsPopup .participants-close:hover {
+    transform: scale(1.1);
+}
+.participants-content {
+    padding: 15px;
+    flex: 1;
+    overflow-y: auto;
+}
+#loginPanel {
+    background: #ccccff;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    width: 820px;
+    margin-bottom: 20px;
+    border: 1px solid #e0d4ff;
+    position: relative;
+}
+/* MEETING WINDOW - FULL SCREEN WHEN ACTIVE */
+#meeting {
+    background: #ccccff;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    width: 820px;
+    margin-bottom: 20px;
+    border: 1px solid #e0d4ff;
+    position: relative;
+}
+/* FULL SCREEN MEETING MODE */
+#meeting.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+}
+#authSection {
+    background: #ccccff;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    width: 820px;
+    margin-bottom: 20px;
+    border: 1px solid #e0d4ff;
+    text-align: center;
+}
+/* Header for create meeting window */
+.meeting-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e0d4ff;
+}
+.welcome-text {
+    text-align: center;
+    flex-grow: 1;
+    margin: 0;
+}
+.logout-btn {
+    background: #dc3545;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.logout-btn:hover {
+    background: #c82333;
+    transform: translateY(-1px);
+}
+label {
+    display: block;
+    margin: 15px 0 6px;
+    font-weight: bold;
+    color: #222;
+}
+input[type="text"], input[type="email"], input[type="password"], input[type="date"], input[type="time"], input[type="file"] {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+}
+input:focus {
+    border-color: #007bff;
+    outline: none;
+}
+.time-inputs {
+    display: flex;
+    gap: 15px;
+}
+.time-inputs > div {
+    flex: 1;
+}
+#meetingTitle {
+    width: 70%;
+}
+/* Join and Create Meeting Buttons Container */
+.meeting-actions {
+    display: flex;
+    gap: 15px;
+    margin: 20px 0;
+    align-items: center;
+}
+.meeting-actions button {
+    flex: 1;
+    padding: 12px 18px;
+    font-size: 15px;
+    font-weight: bold;
+}
+/* MAIN VIDEO AREA - ZOOM-LIKE LAYOUT */
+#mainVideoArea {
+    width: 100%;
+    height: 60vh; /* Zoom-like height */
+    max-height: 500px;
+    background: #000;
+    border-radius: 10px;
+    position: relative;
+    margin: 10px 0;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: none;
+    aspect-ratio: 16/10; /* Zoom aspect ratio */
+}
+/* FULLSCREEN: Adjust for fullscreen mode */
+#meeting.fullscreen #mainVideoArea {
+    height: 70vh;
+    max-height: 600px;
+    flex: none;
+    margin: 5px 0;
+}
+/* PARTICIPANT GRID - ZOOM-LIKE GRID */
+#participantGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+    width: 100%;
+    height: 100%;
+    padding: 10px;
+    box-sizing: border-box;
+    overflow: hidden; /* Remove scrolling */
+}
+.grid-video-container {
+    position: relative;
+    background: #222;
+    border-radius: 6px;
+    overflow: hidden;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease;
+}
+.grid-video-container:hover {
+    transform: scale(1.02);
+}
+.grid-video-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 6px;
+}
+.grid-participant-name {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+/* SCREEN SHARING VIDEO */
+#screenVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+    border-radius: 10px;
+}
+/* FLOATING PARTICIPANT PANEL */
+#floatingParticipantPanel {
+    position: fixed;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 200px;
+    max-height: 400px;
+    background: rgba(0,0,0,0.9);
+    border-radius: 10px;
+    border: 2px solid #4caf50;
+    z-index: 1500;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    cursor: move;
+}
+.floating-panel-header {
+    background: #4caf50;
+    color: white;
+    padding: 10px;
+    text-align: center;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: move;
+}
+.minimize-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    transition: transform 0.3s ease;
+}
+.minimize-btn:hover {
+    transform: scale(1.2);
+}
+.floating-participants-container {
+    max-height: 350px;
+    overflow-y: auto;
+    padding: 10px;
+}
+.floating-video-item {
+    margin-bottom: 10px;
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+}
+.floating-video-item video {
+    width: 100%;
+    height: 80px;
+    object-fit: cover;
+}
+.floating-video-name {
+    position: absolute;
+    bottom: 2px;
+    left: 2px;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 2px 6px;
+    font-size: 10px;
+    border-radius: 3px;
+}
+/* Hide old video containers */
+#localVideo {
+    display: none;
+}
+#remoteVideos {
+    display: none;
+}
+.hidden {
+    display: none;
+}
+/* ENHANCED Chat Popup Styles */
+#chatPopup {
+    position: fixed;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 350px;
+    height: 500px;
+    background: #ede4ff;
+    border-radius: 12px;
+    border: 2px solid #d8b4fe;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+    z-index: 1500;
+    display: none;
+    flex-direction: column;
+    cursor: move;
+}
+#chatPopup .chat-header {
+    background: #d8b4fe;
+    padding: 15px;
+    border-radius: 10px 10px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    cursor: move;
+}
+#chatPopup .chat-header h4 {
+    margin: 0;
+    color: #333;
+}
+#chatPopup .chat-close {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+#chatPopup .chat-close:hover {
+    transform: scale(1.1);
+}
+/* FIXED: Messages area with scroll limit */
+#chatPopup #messages {
+    height: 200px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 15px;
+    background: white;
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #ddd;
+}
+/* Chat message styles */
+.chat-message {
+    margin-bottom: 10px;
+    padding: 8px;
+    border-radius: 5px;
+    background: #f8f9fa;
+    border-left: 3px solid #007bff;
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+.chat-message:hover {
+    transform: translateX(3px);
+}
+.chat-message-content {
+    flex: 1;
+}
+.chat-message-delete {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 10px;
+    cursor: pointer;
+    margin-left: 10px;
+    opacity: 0.7;
+    transition: all 0.3s ease;
+}
+.chat-message-delete:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+.chat-message.own-message {
+    background: #e3f2fd;
+    border-left-color: #2196f3;
+}
+/* FIXED: Input section now properly positioned at bottom */
+#chatPopup .chat-input-section {
+    padding: 15px;
+    border-top: 1px solid #d8b4fe;
+    flex-shrink: 0;
+    background: #ede4ff;
+    border-radius: 0 0 10px 10px;
+}
+/* Horizontal layout for file upload and emoji buttons */
+#chatPopup .file-emoji-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+#chatPopup .file-upload {
+    flex: 1;
+    margin-bottom: 0;
+}
+#chatPopup .emoji-section {
+    position: relative;
+}
+.emoji-btn {
+    background: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin: 2px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+}
+.emoji-btn:hover {
+    background: #e0e0e0;
+    transform: scale(1.1);
+}
+#chatPopup #chatInput {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+#chatPopup #chatInput:focus {
+    border-color: #007bff;
+    outline: none;
+}
+#chatPopup #sendChat {
+    padding: 8px 15px;
+    background: #2196f3;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+#chatPopup #sendChat:hover {
+    background: #1976d2;
+    transform: translateY(-1px);
+}
+#chatPopup .message-input {
+    display: flex;
+    gap: 10px;
+}
+/* Host Password Prompt Styles */
+.host-password-prompt-modal {
+    background-color: #fff3cd;
+    border: 2px solid #ffc107;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+}
+.host-password-prompt-modal h3 {
+    color: #856404;
+    margin-bottom: 15px;
+}
+.host-password-prompt-modal p {
+    color: #856404;
+    margin: 10px 0;
+}
+.host-password-input-group {
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.host-password-input-group input {
+    padding: 12px;
+    border: 2px solid #ffc107;
+    border-radius: 5px;
+    font-size: 16px;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+}
+.host-password-input-group input:focus {
+    border-color: #ff8f00;
+    outline: none;
+}
+.host-password-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
+}
+.host-password-buttons button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+.host-password-submit {
+    background: #28a745;
+    color: white;
+}
+.host-password-submit:hover {
+    background: #218838;
+    transform: translateY(-1px);
+}
+.host-password-cancel {
+    background: #6c757d;
+    color: white;
+}
+.host-password-cancel:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+}
+/* ENHANCED Reactions Popup Styles */
+#reactionsPopup {
+    position: fixed;
+    bottom: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 15px;
+    padding: 15px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+    z-index: 1600;
+    display: none;
+    text-align: center;
+}
+#reactionsPopup .reactions-header {
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: #333;
+}
+#reactionsPopup .reactions-grid {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+#reactionsPopup .close-reactions {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #666;
+    transition: all 0.3s ease;
+}
+#reactionsPopup .close-reactions:hover {
+    color: #dc3545;
+    transform: scale(1.2);
+}
+button {
+    margin: 3px;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .3s;
+    font-weight: bold;
+    position: relative;
+}
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,.3);
+}
+#muteBtn, #videoBtn {
+    background: #ff5722;
+    color: #fff;
+}
+#muteBtn:hover, #videoBtn:hover {
+    background: #e64a19;
+}
+#shareScreenBtn {
+    background: #4caf50;
+    color: #fff;
+}
+#shareScreenBtn:hover {
+    background: #43a047;
+}
+#audioSettingsBtn {
+    background: #9c27b0;
+    color: #fff;
+}
+#audioSettingsBtn:hover {
+    background: #7b1fa2;
+}
+#leaveBtn {
+    background: #f44336;
+    color: #fff;
+}
+#leaveBtn:hover {
+    background: #d32f2f;
+}
+#uploadBtn, #sendChat {
+    background: #2196f3;
+    color: #fff;
+}
+#uploadBtn:hover, #sendChat:hover {
+    background: #1976d2;
+}
+#joinBtn, #createBtn, #loginBtn, #signupBtn, #showLoginBtn, #showSignupBtn, #createNewMeetingBtn {
+    background: #9c27b0;
+    color: #fff;
+}
+#joinBtn:hover, #createBtn:hover, #loginBtn:hover, #signupBtn:hover, #showLoginBtn:hover, #showSignupBtn:hover, #createNewMeetingBtn:hover {
+    background: #7b1fa2;
+}
+#chatToggleBtn {
+    background: #ffc107;
+    color: #333;
+    font-weight: bold;
+}
+#chatToggleBtn:hover {
+    background: #ffb300;
+}
+#reactionsBtn {
+    background: #ff9800;
+    color: #fff;
+    font-weight: bold;
+    font-size: 20px;
+}
+#reactionsBtn:hover {
+    background: #f57c00;
+}
+#participantsToggleBtn2 {
+    background: #17a2b8;
+    color: white;
+    font-weight: bold;
+    position: relative;
+}
+#participantsToggleBtn2:hover {
+    background: #138496;
+}
+#hostControlsBtn {
+    background: #2196f3;
+    color: white;
+    font-weight: bold;
+}
+#hostControlsBtn:hover {
+    background: #1976d2;
+}
+/* Participants toggle badge */
+.badge {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: #f44336;
+    color: white;
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 8px rgba(0,0,0,.4);
+    z-index: 10;
+}
+.emojiBtn {
+    background: #fff;
+    border: 3px solid #ddd;
+    font-size: 32px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 6px;
+    transition: all .3s;
+    box-shadow: 0 3px 8px rgba(0,0,0,.2);
+}
+.emojiBtn:hover {
+    transform: scale(1.25);
+    box-shadow: 0 6px 16px rgba(0,0,0,.4);
+}
+#raiseHandBtn {
+    background: #ffeb3b;
+    color: #333;
+    font-weight: bold;
+    border: 3px solid #fdd835;
+    font-size: 32px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 8px rgba(0,0,0,.2);
+    transition: all .3s;
+}
+#raiseHandBtn:hover {
+    background: #fdd835;
+    transform: scale(1.25);
+    box-shadow: 0 6px 16px rgba(0,0,0,.4);
+}
+/* Bubble animation for reactions */
+.reaction-bubble {
+    position: absolute;
+    font-size: 60px;
+    pointer-events: none;
+    z-index: 100;
+    animation: bubbleFloat 3s ease-out forwards;
+}
+@keyframes bubbleFloat {
+    0% {
+        opacity: 1;
+        transform: scale(0.5) translateY(0);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.2) translateY(-50px);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.8) translateY(-100px);
+    }
+}
+.reaction-flash {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 90px;
+    opacity: 0;
+    pointer-events: none;
+    animation: flash 1.4s ease-out;
+    z-index: 10;
+}
+@keyframes flash {
+    0% { opacity: 1; transform: translate(-50%, -50%) scale(0.4); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(2.2); }
+}
+/* PARTICIPANT LIST */
+#participantList {
+    margin-top: 20px;
+    padding: 10px;
+    background: #f0f0f0;
+    border-radius: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+/* FULLSCREEN: Simplified layout for meeting content */
+#meeting.fullscreen .meeting-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    height: 100%;
+}
+#meeting.fullscreen .video-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+/* Meeting content layout */
+.meeting-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    height: auto;
+    max-height: 80vh;
+}
+.video-section {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+/* Participant */
+.participant {
+    margin: 5px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px;
+    background: white;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+.participant:hover {
+    transform: translateX(3px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.participant-name {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+/* Hand raised indicator */
+.hand-raised-indicator {
+    background: #ffeb3b;
+    color: #333;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+.participant-controls {
+    display: flex;
+    gap: 5px;
+}
+.mute-user-btn {
+    background: #ff9800;
+    color: white;
+    padding: 5px 10px;
+    font-size: 12px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+.mute-user-btn:hover {
+    background: #f57c00;
+    transform: translateY(-1px);
+}
+#shareInfo {
+    margin-top: 20px;
+    padding: 15px;
+    background: #e8f5e9;
+    border-radius: 10px;
+    border: 2px solid #4caf50;
+}
+#hostShareBox {
+    margin-top: 15px;
+    padding: 15px;
+    background: #e3f2fd;
+    border-radius: 10px;
+    border: 2px solid #2196f3;
+}
+.copy-btn {
+    background: #4caf50;
+    color: white;
+    padding: 8px 12px;
+    font-size: 12px;
+    margin-left: 10px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+.copy-btn:hover {
+    background: #43a047;
+    transform: translateY(-1px);
+}
+.muted {
+    opacity: 0.6;
+}
+.video-off {
+    opacity: 0.6;
+}
+.host-muted {
+    background: #8e24aa !important;
+}
+.participant-muted {
+    background: #dc3545 !important;
+    color: white !important;
+}
+/* Role badges in participant list */
+.participant-name::after {
+    content: attr(data-role);
+    margin-left: 6px;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: white;
+}
+.participant-name[data-role="Host"]::after {
+    background: #ff9800;
+}
+.participant-name[data-role="Co-Host"]::after {
+    background: #673ab7;
+}
+/* Recording indicator */
+.recording-indicator {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #dc3545;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-weight: bold;
+    z-index: 1501;
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+/* Responsive video grid */
+@media (max-width: 768px) {
+    #mainVideoArea {
+        height: 50vh;
+        max-height: 400px;
+    }
+    #meeting.fullscreen #mainVideoArea {
+        height: 60vh;
+        max-height: 500px;
+    }
+    #participantGrid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 6px;
+        padding: 8px;
+    }
+    .grid-video-container {
+        min-height: 100px;
+    }
+    button {
+        padding: 6px 10px;
+        font-size: 12px;
+        margin: 2px;
+    }
+}
+@media (min-width: 1200px) {
+    #participantGrid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px;
+        padding: 12px;
+    }
+    #mainVideoArea {
+        max-height: 550px;
+    }
+}
+/* Loading animation */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+/* Success notification */
+.success-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #28a745;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    z-index: 9999;
+    animation: slideInRight 0.3s ease;
+}
+@keyframes slideInRight {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+    </style>
+</head>
+
+<body>
+    <h2>🎥 Agutech Mini Zoom</h2>
+
+    <!-- COUNTDOWN TIMER - Fixed at top center -->
+    <div id="meetingCountdownTimer">
+        <div id="timerText">Meeting ends in: <span id="timerDisplay">00:00</span></div>
+    </div>
+
+    <!-- Authentication Section -->
+    <div id="authSection">
+        <h3>🌟 Welcome to Agutech Mini Zoom</h3>
+        <p>Please sign in to create or join meetings</p>
+        <button id="showLoginBtn">🔐 Sign In</button>
+        <button id="showSignupBtn">📝 Sign Up</button>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('loginModal')">&times;</span>
+            <h3>🔐 Sign In</h3>
+            <div id="loginError" class="error-message hidden"></div>
+            <label>📧 Email:</label>
+            <input type="email" id="loginEmail" placeholder="Enter your email" onkeypress="if(event.key==='Enter') document.getElementById('loginPassword').focus()">
+            <label>🔒 Password:</label>
+            <div class="password-container">
+                <input type="password" id="loginPassword" placeholder="Enter your password" onkeypress="if(event.key==='Enter') login()">
+                <span class="password-toggle" onclick="togglePassword('loginPassword')">👁️</span>
+            </div>
+            <div class="checkbox-container">
+                <input type="checkbox" id="showLoginPassword" onchange="togglePasswordVisibility('loginPassword', this.checked)">
+                <label for="showLoginPassword" style="margin: 0;">Show Password</label>
+            </div>
+            <button id="loginBtn">🚀 Sign In</button>
+            <p><a href="#" onclick="showForgotPassword()">🔄 Forgot Password?</a></p>
+        </div>
+    </div>
+
+    <!-- Signup Modal -->
+    <div id="signupModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('signupModal')">&times;</span>
+            <h3>📝 Sign Up</h3>
+            <div id="signupError" class="error-message hidden"></div>
+            <div id="signupSuccess" class="success-message hidden"></div>
+            <label>👤 Full Name:</label>
+            <input type="text" id="signupName" placeholder="Enter your full name" onkeypress="if(event.key==='Enter') document.getElementById('signupEmail').focus()">
+            <label>📧 Email:</label>
+            <input type="email" id="signupEmail" placeholder="Enter your email" onkeypress="if(event.key==='Enter') document.getElementById('signupPassword').focus()">
+            <label> 🔒 Password:</label>
+            <div class="password-container">
+                <input type="password" id="signupPassword" placeholder="Create a password" onkeypress="if(event.key==='Enter') signup()">
+                <span class="password-toggle" onclick="togglePassword('signupPassword')">👁️</span>
+            </div>
+            <div class="checkbox-container">
+                <input type="checkbox" id="showSignupPassword" onchange="togglePasswordVisibility('signupPassword', this.checked)">
+                <label for="showSignupPassword" style="margin: 0;">Show Password</label>
+            </div>
+            <button id="signupBtn"> ✨ Sign Up</button>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div id="forgotPasswordModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('forgotPasswordModal')">&times;</span>
+            <h3>🔄 Reset Password</h3>
+            <div id="forgotError" class="error-message hidden"></div>
+            <div id="forgotSuccess" class="success-message hidden"></div>
+            <label>📧 Email:</label>
+            <input type="email" id="forgotEmail" placeholder="Enter your email" onkeypress="if(event.key==='Enter') forgotPassword()">
+            <button id="forgotPasswordBtn">📤 Send Reset Link</button>
+            <div id="resetTokenSection" class="hidden">
+                <label>🔑 Reset Token:</label>
+                <input type="text" id="resetToken" placeholder="Enter reset token from email" onkeypress="if(event.key==='Enter') document.getElementById('newPassword').focus()">
+                <label>🔒 New Password:</label>
+                <div class="password-container">
+                    <input type="password" id="newPassword" placeholder="Enter new password" onkeypress="if(event.key==='Enter') resetPassword()">
+                    <span class="password-toggle" onclick="togglePassword('newPassword')">👁️</span>
+                </div>
+                <div class="checkbox-container">
+                    <input type="checkbox" id="showNewPassword" onchange="togglePasswordVisibility('newPassword', this.checked)">
+                    <label for="showNewPassword" style="margin: 0;">Show Password</label>
+                </div>
+                <button id="resetPasswordBtn">🔄 Reset Password</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Meeting Modal -->
+    <div id="createMeetingModal" class="modal">
+        <div class="modal-content" style="width: 800px;">
+            <span class="close" onclick="closeModal('createMeetingModal')">&times;</span>
+            <h3 style="margin-top: 30px; color: #555;">📅 Create New Meeting</h3>
+            <label>📋 Meeting Title:</label>
+            <input type="text" id="meetingTitle" placeholder="Enter meeting title (required)">
+            <label>📅 Date:</label>
+            <input type="date" id="meetingDate">
+            <div class="time-inputs">
+                <div>
+                    <label>🕐 Start Time:</label>
+                    <div class="custom-time-picker">
+                        <select id="startHour" class="time-select">
+                            <!-- Hours will be populated by JavaScript -->
+                        </select>
+                        <select id="startMinute" class="time-select">
+                            <!-- Minutes will be populated by JavaScript -->
+                        </select>
+                        <select id="startAmPm" class="time-select">
+                            <option value="AM">AM</option>
+                            <option value="PM">PM</option>
+                        </select>
+                        <button type="button" class="time-ok-btn" onclick="setStartTime()">✅ OK</button>
+                    </div>
+                    <input type="time" id="meetingStartTime" style="display: none;">
+                </div>
+                <div>
+                    <label>🕐 End Time:</label>
+                    <div class="custom-time-picker">
+                        <select id="endHour" class="time-select">
+                            <!-- Hours will be populated by JavaScript -->
+                        </select>
+                        <select id="endMinute" class="time-select">
+                            <!-- Minutes will be populated by JavaScript -->
+                        </select>
+                        <select id="endAmPm" class="time-select">
+                            <option value="AM">AM</option>
+                            <option value="PM">PM</option>
+                        </select>
+                        <button type="button" class="time-ok-btn" onclick="setEndTime()">✅ OK</button>
+                    </div>
+                    <input type="time" id="meetingEndTime" style="display: none;">
+                </div>
+            </div>
+            <label>🔐 Host Password (Required):</label>
+            <input type="password" id="hostPasswordCreate" placeholder="Create a host password for additional security" required>
+            <button id="createBtn">🚀 Create Meeting</button>
+        </div>
+    </div>
+
+    <!-- Role Selection Modal -->
+    <div id="roleSelectionModal" class="modal">
+        <div class="modal-content">
+            <h3>👥 Join Meeting As</h3>
+            <div class="role-selection">
+                <p>How would you like to join this meeting?</p>
+                <button id="joinAsParticipantBtn" class="role-btn">👤 Join as Participant</button>
+                <button id="joinAsCoHostBtn" class="role-btn cohost">🤝 Join as Co-Host</button>
+                <button id="joinAsHostBtn" class="role-btn host">👑 Join as Host</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Host Password Modal - IMPROVED VERSION -->
+    <div id="hostPasswordModal" class="modal">
+        <div class="modal-content host-password-prompt-modal">
+            <span class="close" onclick="closeModal('hostPasswordModal')">&times;</span>
+            <h3 id="hostPasswordTitle">🔐 Host Authentication Required</h3>
+            <div id="hostPasswordError" class="error-message hidden"></div>
+            <p id="hostPasswordDescription">Please enter the host password to join as host or co-host:</p>
+            <div class="host-password-input-group">
+                <label>🔑 Host Password/Code:</label>
+                <div class="password-container">
+                    <input type="password" id="hostPasswordInput" placeholder="Enter host password or special code" onkeypress="if(event.key==='Enter') verifyHostPasswordForJoin()">
+                    <span class="password-toggle" onclick="togglePassword('hostPasswordInput')">👁️</span>
+                </div>
+                <div class="checkbox-container">
+                    <input type="checkbox" id="showHostPassword" onchange="togglePasswordVisibility('hostPasswordInput', this.checked)">
+                    <label for="showHostPassword" style="margin: 0;">Show Password</label>
+                </div>
+            </div>
+            <div class="host-password-buttons">
+                <button class="host-password-submit" onclick="verifyHostPasswordForJoin()">✅ Verify & Join</button>
+                <button class="host-password-cancel" onclick="closeModal('hostPasswordModal'); showRoleSelection(currentMeetingCode, currentMeetingInfo)">⬅️ Back to Role Selection</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Meeting Interface -->
+    <div id="loginPanel" class="hidden">
+        <!-- Header with welcome text and logout button -->
+        <div class="meeting-header">
+            <div></div> <!-- Empty div for spacing -->
+            <h3 class="welcome-text">🎉 Welcome, <span id="loggedInUserName"></span>!</h3>
+            <button id="logoutBtn" class="logout-btn">🚪 Logout</button>
+        </div>
+
+        <!-- My Meetings Section with Scroll -->
+        <div id="myMeetingsSection" class="my-meetings">
+            <h4>📋 My Meetings (Recent)</h4>
+            <div class="meetings-scroll-container">
+                <div id="myMeetingsList">
+                    <p>🔄 Loading your meetings...</p>
+                </div>
+            </div>
+        </div>
+
+        <label>👤 Enter your name:</label>
+        <input id="userName" placeholder="Your name">
+        <label>🔢 Meeting Code:</label>
+        <input id="room" placeholder="Enter meeting code">
+
+        <!-- Join and Create Meeting Buttons -->
+        <div class="meeting-actions">
+            <button id="joinBtn">🚀 Join Meeting</button>
+            <button id="createNewMeetingBtn">➕ Create New Meeting</button>
+        </div>
+    </div>
+
+    <!-- Host Control Panel -->
+    <div id="hostControlPanel" class="hidden">
+        <div class="meeting-detail-header">
+            <h3 class="meeting-detail-title">👑 Host Control Panel</h3>
+            <button id="logoutFromDetailBtn" class="logout-btn">🚪 Logout</button>
+        </div>
+
+        <button id="hostControlToggle" class="toggle-btn">📋 Show Meeting Details</button>
+
+        <div id="hostControlContent" class="hidden">
+            <div class="meeting-title">
+                <strong>📋 Meeting:</strong> <span id="hostControlMeetingTitle"></span>
+            </div>
+            <p>📅 Meeting scheduled: <span id="hostScheduledTime"></span> - <span id="hostEndTime"></span></p>
+            <p>💡 You can join the meeting now and wait for participants, or join later at the scheduled time.</p>
+
+            <div id="hostCountdown" style="font-size: 18px; font-weight: bold; margin: 15px 0;"></div>
+
+            <div style="margin-top: 20px;">
+                <button id="joinNowBtn" class="host-action-btn">🚀 Join Meeting Now</button>
+                <button id="copyDetailsBtn" class="host-action-btn" style="background: #17a2b8;">📋 Copy Meeting Details</button>
+            </div>
+
+            <!-- Meeting details for easy copying -->
+            <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
+                <strong>📊 Meeting Details:</strong><br><br>
+                <label>🔢 Meeting Code:</label>
+                <input id="hostControlCode" readonly style="width: 60%;">
+                <button class="copy-btn" onclick="copyToClipboard('hostControlCode')">📋 Copy Code</button><br><br>
+                <label>🔗 Meeting Link:</label>
+                <input id="hostControlLink" readonly style="width: 60%;">
+                <button class="copy-btn" onclick="copyToClipboard('hostControlLink')">📋 Copy Link</button><br><br>
+                <label>🔐 Host Password:</label>
+                <input id="hostControlPassword" readonly style="width: 60%;">
+                <button class="copy-btn" onclick="copyToClipboard('hostControlPassword')">📋 Copy Password</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Meeting Ended Message -->
+    <div id="meetingEndedMessage" class="meeting-ended hidden">
+        <h3>⏰ Meeting Has Ended</h3>
+        <div class="meeting-title">
+            <strong>📋 Meeting:</strong> <span id="endedMeetingTitle"></span>
+        </div>
+        <p>✅ This meeting has concluded. Thank you for participating!</p>
+        <button onclick="location.reload()" style="background: #6c757d; color: white; margin-top: 15px;">🏠 Return to Home</button>
+    </div>
+
+    <!-- Waiting Room for Participants -->
+    <div id="waitingRoom" class="hidden">
+        <h3>⏰ Meeting Not Started Yet</h3>
+        <div class="meeting-title">
+            <strong>📋 Meeting:</strong> <span id="waitingRoomMeetingTitle"></span>
+        </div>
+        <p>📅 The meeting is scheduled to start at <span id="scheduledTime"></span></p>
+        <p>⏳ Please wait for the host to start the meeting.</p>
+        <div id="countdown"></div>
+        <button onclick="location.reload()" style="margin-top: 15px; background: #6c757d; color: white;">🔄 Refresh</button>
+    </div>
+
+    <!-- Host Early Access -->
+    <div id="hostEarlyAccess" class="hidden">
+        <h3>🎯 Host Early Access</h3>
+        <div class="meeting-title">
+            <strong>📋 Meeting:</strong> <span id="earlyAccessMeetingTitle"></span>
+        </div>
+        <p>You joined early! Participants will be able to join at the scheduled time: <span id="hostScheduledTimeInMeeting"></span></p>
+        <p> ⚡ Meeting will automatically allow participants at the scheduled time.</p>
+        <div id="hostCountdownInMeeting"></div>
+    </div>
+
+    <!-- Audio Settings Popup -->
+    <div id="audioSettingsPopup">
+        <div class="audio-header" id="audioHeader">
+            <h4>🎧 Audio Settings</h4>
+            <button class="audio-close" onclick="toggleAudioSettings()">×</button>
+        </div>
+        <div class="audio-controls">
+            <h5>🎧 Audio Settings</h5>
+            <div class="volume-control">
+                <label>🎤 Microphone Volume:</label>
+                <div class="volume-slider-container">
+                    <input type="range" id="micVolumeSlider" class="volume-slider" min="0" max="100" value="80">
+                    <span id="micVolumeValue" class="volume-value">80%</span>
+                </div>
+            </div>
+            <div class="volume-control">
+                <label>🔊 Speaker Volume:</label>
+                <div class="volume-slider-container">
+                    <input type="range" id="speakerVolumeSlider" class="volume-slider" min="0" max="100" value="80">
+                    <span id="speakerVolumeValue" class="volume-value">80%</span>
+                </div>
+            </div>
+            <div class="checkbox-container">
+                <input type="checkbox" id="audioMonitoringToggle">
+                <label for="audioMonitoringToggle">🎧 Enable Audio Monitoring (Hear Yourself)</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Host Controls Popup -->
+    <div id="hostControlsPopup">
+        <div class="controls-header" id="controlsHeader">
+            <h4>⚙️ Host Controls</h4>
+            <button class="controls-close" onclick="toggleHostControls()">×</button>
+        </div>
+        <div class="host-controls-content">
+            <button id="recordBtn" class="recording-btn">🔴 Start Recording</button>
+            <div id="recordingStatus" class="hidden">
+                <p style="margin: 5px 0;">🔴 Recording...</p>
+                <div id="recordingTime" style="font-weight: bold;">00:00</div>
+            </div>
+            <button id="exportParticipantsBtn" class="export-btn">📊 Export Participants</button>
+            <button id="viewRecordingsBtn" class="export-btn">📹 View Recordings</button>
+            <button id="muteAllBtn">🔇 Mute All</button>
+        </div>
+    </div>
+
+    <!-- Participants Popup -->
+    <div id="participantsPopup">
+        <div class="participants-header" id="participantsHeader">
+            <h4>👥 Participants</h4>
+            <button class="participants-close" onclick="toggleParticipants()">×</button>
+        </div>
+        <div class="participants-content">
+            <div id="participantList">
+                <h4>👥 Participants</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Popup - DRAGGABLE AND FIXED LAYOUT -->
+<div id="chatPopup">
+  <div class="chat-header" id="chatHeader">
+    <h4>💬 Meeting Chat</h4>
+    <button class="chat-close" onclick="toggleChatPopup()">×</button>
+  </div>
+  <!-- Messages area with fixed height and scroll -->
+  <div id="messages">
+    <!-- Chat messages appear here -->
+  </div>
+  <!-- Input section (fixed at bottom) -->
+  <div class="chat-input-section">
+    <!-- Message input + Send -->
+    <div class="message-input">
+      <input id="chatInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter') document.getElementById('sendChat').click()">
+      <button id="sendChat">📤 Send</button>
+    </div>
+    <!-- File upload and Emoji buttons in same row -->
+    <div class="file-emoji-row">
+      <div class="file-upload">
+        <input type="file" id="fileInput" style="font-size: 12px;">
+        <button id="uploadBtn" style="padding: 6px 12px; font-size: 12px;">📎 Share File</button>
+      </div>
+      <div class="emoji-section">
+        <button id="emojiToggleBtn" style="background:#ffc107; color:#333; padding:6px 12px; border-radius:6px;">
+          😀
+        </button>
+        <!-- Emoji popup (hidden by default) - positioned above button -->
+        <div id="emojiPopup" style="display:none; position:absolute; bottom:100%; right:0; margin-bottom:5px; text-align:center; max-height:150px; overflow-y:auto; background:#f9f9f9; padding:8px; border-radius:6px; border:1px solid #ddd; width:200px; z-index:1601;">
+          <button class="emoji-btn" onclick="insertEmoji('😀')">😀</button>
+          <button class="emoji-btn" onclick="insertEmoji('😂')">😂</button>
+          <button class="emoji-btn" onclick="insertEmoji('❤️')">❤️</button>
+          <button class="emoji-btn" onclick="insertEmoji('👍')">👍</button>
+          <button class="emoji-btn" onclick="insertEmoji('👏')">👏</button>
+          <button class="emoji-btn" onclick="insertEmoji('🎉')">🎉</button>
+          <button class="emoji-btn" onclick="insertEmoji('😊')">😊</button>
+          <button class="emoji-btn" onclick="insertEmoji('🤔')">🤔</button>
+          <button class="emoji-btn" onclick="insertEmoji('🙏')">🙏</button>
+          <button class="emoji-btn" onclick="insertEmoji('🔥')">🔥</button>
+          <button class="emoji-btn" onclick="insertEmoji('💯')">💯</button>
+          <button class="emoji-btn" onclick="insertEmoji('🥳')">🥳</button>
+          <button class="emoji-btn" onclick="insertEmoji('😎')">😎</button>
+          <button class="emoji-btn" onclick="insertEmoji('🤷‍♂️')">🤷‍♂️</button>
+          <button class="emoji-btn" onclick="insertEmoji('🤦‍♀️')">🤦‍♀️</button>
+          <button class="emoji-btn" onclick="insertEmoji('🚀')">🚀</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    <!-- Reactions Popup -->
+    <div id="reactionsPopup">
+        <button class="close-reactions" onclick="toggleReactionsPopup()">&times;</button>
+        <div class="reactions-header">Reactions</div>
+        <div class="reactions-grid">
+            <button id="raiseHandBtn" class="emojiBtn" title="Raise Hand">✋</button>
+            <button class="emojiBtn" data-emoji="👍" title="Like">👍</button>
+            <button class="emojiBtn" data-emoji="👏" title="Clap Hand">👏</button>
+            <button class="emojiBtn" data-emoji="😂" title="Laugh">😂</button>
+            <button class="emojiBtn" data-emoji="❤️" title="Love">❤️</button>
+            <button class="emojiBtn" data-emoji="🎉" title="Celebrate">🎉</button>
+            <button class="emojiBtn" data-emoji="😊" title="Smile">😊</button>
+            <button class="emojiBtn" data-emoji="🤔" title="Think">🤔</button>
+        </div>
+    </div>
+
+    <!-- FLOATING PARTICIPANT PANEL - Visible during screen sharing -->
+    <div id="floatingParticipantPanel">
+        <div class="floating-panel-header" id="floatingPanelHeader">
+            <span>👥 Participants</span>
+            <button class="minimize-btn" onclick="toggleFloatingPanel()">−</button>
+        </div>
+        <div class="floating-participants-container" id="floatingParticipantsContainer">
+            <!-- Participant videos will be added here during screen sharing -->
+        </div>
+    </div>
+
+    <div id="meeting" class="hidden">
+        <!-- Meeting header with logout button -->
+        <div class="meeting-detail-header">
+            <h3>Meeting Room: <span id="roomName"></span></h3>
+            <button id="logoutFromMeetingBtn" class="logout-btn">Logout</button>
+        </div>
+
+
+
+        <div class="meeting-title">
+            <strong>📋 Meeting:</strong> <span id="meetingRoomTitle"></span>
+        </div>
+
+        <h4>👋 Welcome, <span id="displayName"></span> | 👥 Participants: <span id="participantCount">0</span></h4>
+
+
+
+
+
+
+
+        <!-- Main meeting content in horizontal layout -->
+        <div class="meeting-content">
+            <!-- Main Video Area -->
+            <div class="video-section">
+                <!-- MAIN VIDEO AREA -->
+                <div id="mainVideoArea" style="flex: 1; display: flex; flex-direction: column;">
+                    <!-- Participant Grid (shown when no screen sharing) -->
+                    <div id="participantGrid"></div>
+                        <!-- Participants will be displayed here in grid format -->
+                    </div>
+                    <!-- Screen Video (shown during screen sharing) -->
+                    <video id="screenVideo" class="hidden" autoplay playsinline></video>
+                </div>
+
+                <!-- Hidden old video elements -->
+                <video id="localVideo" autoplay muted class="hidden"></video>
+                <div id="remoteVideos" class="hidden"></div>
+
+                <div style="margin: 15px 0; text-align: center; flex-shrink: 0;">
+                    <button id="muteBtn">🎤 Mute</button>
+                    <button id="videoBtn">📹 Stop Video</button>
+                    <button id="shareScreenBtn">🖥️ Share Screen</button>
+                    <button id="audioSettingsBtn">🎧 Audio Settings</button>
+                    <button id="chatToggleBtn">💬 Show Chat</button>
+                    <button id="reactionsBtn">😀</button>
+                    <button id="participantsToggleBtn2">👥 Participants (<span id="participantCountBadge2">0</span>)</button>
+                    <button id="hostControlsBtn" class="hidden">⚙️ Controls</button>
+                    <button id="leaveBtn">🚪 Leave</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // [ALL YOUR ORIGINAL JAVASCRIPT CODE REMAINS EXACTLY THE SAME]
+        // Global variables
+        let ws, roomName, userName, isHost = false, myId = null;
+        let localStream, screenStream, isSharing = false;
+        let peers = {}, unreadCount = 0;
+        let isMuted = false, isVideoOff = false, isChatOpen = false, isReactionsOpen = false;
+        let mutedByHost = false;
+        let meetingScheduledTime = null;
+        let countdownInterval = null;
+        let createdMeetingCode = null;
+        let meetingTitle = '';
+        let authToken = null;
+        let loggedInUser = null;
+        let currentMeetingInfo = null;
+        let currentMeetingCode = null;
+        let hostPassword = null;
+        let participantMuteStates = {};
+        let selectedRole = null;
+        let isCoHost = false;
+        let providedHostPassword = '';
+        let chatMessages = [];
+        let participantHandRaised = {};
+        let isParticipantListVisible = false;
+        let isFloatingPanelMinimized = false;
+
+        // NEW: Popup visibility states
+        let isAudioSettingsOpen = false;
+        let isHostControlsOpen = false;
+        let isParticipantsPopupOpen = false;
+
+        // Recording variables
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let isRecording = false;
+        let recordingStartTime = null;
+        let recordingTimer = null;
+        let recordingIndicator = null;
+
+        // Dragging variables for chat
+        let isDraggingChat = false;
+        let chatDragOffsetX = 0;
+        let chatDragOffsetY = 0;
+
+        // Dragging variables for floating panel
+        let isDraggingPanel = false;
+        let panelDragOffsetX = 0;
+        let panelDragOffsetY = 0;
+
+        // NEW: Dragging variables for popups
+        let isDraggingAudio = false;
+        let audioDragOffsetX = 0;
+        let audioDragOffsetY = 0;
+
+        let isDraggingControls = false;
+        let controlsDragOffsetX = 0;
+        let controlsDragOffsetY = 0;
+
+        let isDraggingParticipants = false;
+        let participantsDragOffsetX = 0;
+        let participantsDragOffsetY = 0;
+
+        // Audio context and monitoring variables
+        let audioContext = null;
+        let micGainNode = null;
+        let speakerGainNode = null;
+        let monitoringGainNode = null;
+        let isAudioMonitoringEnabled = false;
+
+        // COUNTDOWN TIMER VARIABLES
+        let meetingEndTime = null;
+        let meetingTimerInterval = null;
+        let fiveMinuteWarningShown = false;
+        let oneMinuteWarningShown = false;
+
+        // NEW: Toggle functions for popups
+        function toggleAudioSettings() {
+            const audioPopup = document.getElementById('audioSettingsPopup');
+            const isVisible = audioPopup.style.display === 'flex';
+
+            if (isVisible) {
+                audioPopup.style.display = 'none';
+                document.getElementById('audioSettingsBtn').textContent = '🎧 Audio Settings';
+                isAudioSettingsOpen = false;
+            } else {
+                audioPopup.style.display = 'flex';
+                document.getElementById('audioSettingsBtn').textContent = '🎧 Hide Audio';
+                isAudioSettingsOpen = true;
+            }
+        }
+
+        function toggleHostControls() {
+            const controlsPopup = document.getElementById('hostControlsPopup');
+            const isVisible = controlsPopup.style.display === 'flex';
+
+            if (isVisible) {
+                controlsPopup.style.display = 'none';
+                document.getElementById('hostControlsBtn').textContent = '⚙️ Controls';
+                isHostControlsOpen = false;
+            } else {
+                controlsPopup.style.display = 'flex';
+                document.getElementById('hostControlsBtn').textContent = '⚙️ Hide Controls';
+                isHostControlsOpen = true;
+            }
+        }
+
+        function toggleParticipants() {
+            const participantsPopup = document.getElementById('participantsPopup');
+            const isVisible = participantsPopup.style.display === 'flex';
+
+            if (isVisible) {
+                participantsPopup.style.display = 'none';
+                document.getElementById('participantsToggleBtn2').innerHTML = `👥 Participants (<span id="participantCountBadge2">${document.getElementById('participantCount').textContent}</span>)`;
+                isParticipantsPopupOpen = false;
+            } else {
+                participantsPopup.style.display = 'flex';
+                document.getElementById('participantsToggleBtn2').innerHTML = '👥 Hide Participants';
+                isParticipantsPopupOpen = true;
+            }
+        }
+
+        // NEW: Initialize dragging for all popups
+        function initializePopupDragging() {
+            // Audio Settings Dragging
+            const audioPopup = document.getElementById('audioSettingsPopup');
+            const audioHeader = document.getElementById('audioHeader');
+
+            audioHeader.addEventListener('mousedown', (e) => {
+                isDraggingAudio = true;
+                const rect = audioPopup.getBoundingClientRect();
+                audioDragOffsetX = e.clientX - rect.left;
+                audioDragOffsetY = e.clientY - rect.top;
+                audioPopup.style.cursor = 'grabbing';
+                e.preventDefault();
+            });
+
+            // Host Controls Dragging
+            const controlsPopup = document.getElementById('hostControlsPopup');
+            const controlsHeader = document.getElementById('controlsHeader');
+
+            controlsHeader.addEventListener('mousedown', (e) => {
+                isDraggingControls = true;
+                const rect = controlsPopup.getBoundingClientRect();
+                controlsDragOffsetX = e.clientX - rect.left;
+                controlsDragOffsetY = e.clientY - rect.top;
+                controlsPopup.style.cursor = 'grabbing';
+                e.preventDefault();
+            });
+
+            // Participants Dragging
+            const participantsPopup = document.getElementById('participantsPopup');
+            const participantsHeader = document.getElementById('participantsHeader');
+
+            participantsHeader.addEventListener('mousedown', (e) => {
+                isDraggingParticipants = true;
+                const rect = participantsPopup.getBoundingClientRect();
+                participantsDragOffsetX = e.clientX - rect.left;
+                participantsDragOffsetY = e.clientY - rect.top;
+                participantsPopup.style.cursor = 'grabbing';
+                e.preventDefault();
+            });
+
+            // Global mouse move handler
+            document.addEventListener('mousemove', (e) => {
+                if (isDraggingAudio) {
+                    let newX = e.clientX - audioDragOffsetX;
+                    let newY = e.clientY - audioDragOffsetY;
+
+                    const maxX = window.innerWidth - audioPopup.offsetWidth;
+                    const maxY = window.innerHeight - audioPopup.offsetHeight;
+
+                    newX = Math.max(0, Math.min(newX, maxX));
+                    newY = Math.max(0, Math.min(newY, maxY));
+
+                    audioPopup.style.left = newX + 'px';
+                    audioPopup.style.top = newY + 'px';
+                    audioPopup.style.transform = 'none';
+                }
+
+                if (isDraggingControls) {
+                    let newX = e.clientX - controlsDragOffsetX;
+                    let newY = e.clientY - controlsDragOffsetY;
+
+                    const maxX = window.innerWidth - controlsPopup.offsetWidth;
+                    const maxY = window.innerHeight - controlsPopup.offsetHeight;
+
+                    newX = Math.max(0, Math.min(newX, maxX));
+                    newY = Math.max(0, Math.min(newY, maxY));
+
+                    controlsPopup.style.left = newX + 'px';
+                    controlsPopup.style.top = newY + 'px';
+                    controlsPopup.style.right = 'auto';
+                    controlsPopup.style.transform = 'none';
+                }
+
+                if (isDraggingParticipants) {
+                    let newX = e.clientX - participantsDragOffsetX;
+                    let newY = e.clientY - participantsDragOffsetY;
+
+                    const maxX = window.innerWidth - participantsPopup.offsetWidth;
+                    const maxY = window.innerHeight - participantsPopup.offsetHeight;
+
+                    newX = Math.max(0, Math.min(newX, maxX));
+                    newY = Math.max(0, Math.min(newY, maxY));
+
+                    participantsPopup.style.left = newX + 'px';
+                    participantsPopup.style.top = newY + 'px';
+                    participantsPopup.style.right = 'auto';
+                    participantsPopup.style.transform = 'none';
+                }
+            });
+
+            // Global mouse up handler
+            document.addEventListener('mouseup', () => {
+                if (isDraggingAudio) {
+                    isDraggingAudio = false;
+                    audioPopup.style.cursor = 'move';
+                }
+                if (isDraggingControls) {
+                    isDraggingControls = false;
+                    controlsPopup.style.cursor = 'move';
+                }
+                if (isDraggingParticipants) {
+                    isDraggingParticipants = false;
+                    participantsPopup.style.cursor = 'move';
+                }
+            });
+        }
+
+        // COUNTDOWN TIMER FUNCTIONS
+        function initializeMeetingTimer(endDateTime) {
+            if (!endDateTime) return;
+
+            meetingEndTime = new Date(endDateTime);
+            // Start the timer immediately
+            updateMeetingTimer();
+            // Update every second
+            if (meetingTimerInterval) {
+                clearInterval(meetingTimerInterval);
+            }
+            meetingTimerInterval = setInterval(updateMeetingTimer, 1000);
+        }
+
+        function updateMeetingTimer() {
+            if (!meetingEndTime) return;
+
+            const now = new Date();
+            const timeLeft = meetingEndTime - now;
+
+            // If meeting has ended
+            if (timeLeft <= 0) {
+                showMeetingEndedTimer();
+                return;
+            }
+
+            const minutes = Math.floor(timeLeft / (1000 * 60));
+            const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+
+            // Show timer only when ≤10 minutes remaining
+            const timerElement = document.getElementById('meetingCountdownTimer');
+            if (minutes <= 10) {
+                timerElement.style.display = 'block';
+                // Update display
+                document.getElementById('timerDisplay').textContent =
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+                // Update timer style based on time remaining
+                timerElement.className = '';
+                if (minutes <= 2) {
+                    timerElement.classList.add('timer-critical');
+                } else if (minutes <= 5) {
+                    timerElement.classList.add('timer-warning');
+                } else {
+                    timerElement.classList.add('timer-normal');
+                }
+
+                // Show warnings
+                if (minutes === 5 && seconds === 0 && !fiveMinuteWarningShown) {
+                    fiveMinuteWarningShown = true;
+                    sendTimerWarning('⏰ Meeting will end in 5 minutes.');
+                }
+                if (minutes === 1 && seconds === 0 && !oneMinuteWarningShown) {
+                    oneMinuteWarningShown = true;
+                    sendTimerWarning('⚠️ Meeting will end in 1 minute!');
+                }
+            } else {
+                timerElement.style.display = 'none';
+            }
+        }
+
+        function sendTimerWarning(message) {
+            // Send to chat
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'chat',
+                    payload: { from: 'System', text: message }
+                }));
+            }
+            appendMessage({ from: 'System', text: message });
+        }
+
+        function showMeetingEndedTimer() {
+            const timerElement = document.getElementById('meetingCountdownTimer');
+            timerElement.style.display = 'block';
+            timerElement.className = 'timer-critical';
+            document.getElementById('timerDisplay').textContent = '00:00';
+            document.getElementById('timerText').innerHTML = '🔚 Meeting time has ended';
+
+            // Send final notification
+            sendTimerWarning('🔚 Meeting time has ended');
+
+            // Clear interval
+            if (meetingTimerInterval) {
+                clearInterval(meetingTimerInterval);
+                meetingTimerInterval = null;
+            }
+
+            // Close meeting after 3 seconds
+            setTimeout(() => {
+                if (ws) {
+                    ws.close(1000, "Meeting time has ended");
+                }
+            }, 3000);
+        }
+
+        // ENABLE FULLSCREEN MODE FOR MEETING
+        function enableFullscreenMeeting() {
+            const meetingDiv = document.getElementById('meeting');
+            meetingDiv.classList.add('fullscreen');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // DISABLE FULLSCREEN MODE FOR MEETING
+        function disableFullscreenMeeting() {
+            const meetingDiv = document.getElementById('meeting');
+            meetingDiv.classList.remove('fullscreen');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Initialize audio context and monitoring
+        async function initializeAudioContext() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                micGainNode = audioContext.createGain();
+                speakerGainNode = audioContext.createGain();
+                monitoringGainNode = audioContext.createGain();
+
+                micGainNode.gain.value = 0.8;
+                speakerGainNode.gain.value = 0.8;
+                monitoringGainNode.gain.value = 0.3;
+
+                console.log('Audio context initialized successfully');
+            } catch (error) {
+                console.error('Failed to initialize audio context:', error);
+            }
+        }
+
+        // Setup audio monitoring
+        function setupAudioMonitoring(stream) {
+            if (!audioContext || !stream) return;
+
+            try {
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(micGainNode);
+
+                if (isAudioMonitoringEnabled) {
+                    micGainNode.connect(monitoringGainNode);
+                    monitoringGainNode.connect(audioContext.destination);
+                }
+
+                console.log('Audio monitoring setup complete');
+            } catch (error) {
+                console.error('Failed to setup audio monitoring:', error);
+            }
+        }
+
+        // Toggle audio monitoring
+        function toggleAudioMonitoring(enabled) {
+            if (!audioContext || !monitoringGainNode) return;
+
+            isAudioMonitoringEnabled = enabled;
+
+            if (enabled) {
+                if (micGainNode) {
+                    micGainNode.connect(monitoringGainNode);
+                    monitoringGainNode.connect(audioContext.destination);
+                }
+                console.log('Audio monitoring enabled');
+            } else {
+                try {
+                    monitoringGainNode.disconnect();
+                } catch (e) {}
+                console.log('Audio monitoring disabled');
+            }
+        }
+
+        // Update microphone volume
+        function updateMicrophoneVolume(volume) {
+            if (micGainNode) {
+                micGainNode.gain.value = volume / 100;
+            }
+
+            if (localStream) {
+                const audioTracks = localStream.getAudioTracks();
+                audioTracks.forEach(track => {
+                    if (track.getSettings) {
+                        const settings = track.getSettings();
+                        if (settings.volume !== undefined) {
+                            track.applyConstraints({
+                                advanced: [{ volume: volume / 100 }]
+                            }).catch(e => console.log('Volume constraint not supported'));
+                        }
+                    }
+                });
+            }
+        }
+
+        // Update speaker volume
+        function updateSpeakerVolume(volume) {
+            if (speakerGainNode) {
+                speakerGainNode.gain.value = volume / 100;
+            }
+
+            document.querySelectorAll('video').forEach(video => {
+                if (video.id !== 'localVideo') {
+                    video.volume = volume / 100;
+                }
+            });
+        }
+
+        // Initialize time selectors
+        function initializeTimeSelectors() {
+            const hourSelectors = ['startHour', 'endHour'];
+            hourSelectors.forEach(selectorId => {
+                const selector = document.getElementById(selectorId);
+                selector.innerHTML = '';
+                for (let i = 1; i <= 12; i++) {
+                    const option = document.createElement('option');
+                    option.value = i.toString().padStart(2, '0');
+                    option.textContent = i.toString();
+                    selector.appendChild(option);
+                }
+            });
+
+            const minuteSelectors = ['startMinute', 'endMinute'];
+            minuteSelectors.forEach(selectorId => {
+                const selector = document.getElementById(selectorId);
+                selector.innerHTML = '';
+                ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].forEach(minute => {
+                    const option = document.createElement('option');
+                    option.value = minute;
+                    option.textContent = minute;
+                    selector.appendChild(option);
+                });
+            });
+        }
+
+        // Set start time from custom picker
+        function setStartTime() {
+            const hour = document.getElementById('startHour').value;
+            const minute = document.getElementById('startMinute').value;
+            const ampm = document.getElementById('startAmPm').value;
+
+            let hour24 = parseInt(hour);
+            if (ampm === 'PM' && hour24 !== 12) hour24 += 12;
+            if (ampm === 'AM' && hour24 === 12) hour24 = 0;
+
+            const timeString = hour24.toString().padStart(2, '0') + ':' + minute;
+            document.getElementById('meetingStartTime').value = timeString;
+
+            // Show success notification
+            showSuccessNotification(`Start time set to ${hour}:${minute} ${ampm}`);
+        }
+
+        // Set end time from custom picker
+        function setEndTime() {
+            const hour = document.getElementById('endHour').value;
+            const minute = document.getElementById('endMinute').value;
+            const ampm = document.getElementById('endAmPm').value;
+
+            let hour24 = parseInt(hour);
+            if (ampm === 'PM' && hour24 !== 12) hour24 += 12;
+            if (ampm === 'AM' && hour24 === 12) hour24 = 0;
+
+            const timeString = hour24.toString().padStart(2, '0') + ':' + minute;
+            document.getElementById('meetingEndTime').value = timeString;
+
+            // Show success notification
+            showSuccessNotification(`End time set to ${hour}:${minute} ${ampm}`);
+        }
+
+        // Show success notification
+        function showSuccessNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'success-notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Toggle floating participant panel during screen sharing
+        function toggleFloatingPanel() {
+            const container = document.getElementById('floatingParticipantsContainer');
+            const minimizeBtn = document.querySelector('.minimize-btn');
+
+            if (isFloatingPanelMinimized) {
+                container.style.display = 'block';
+                minimizeBtn.textContent = '−';
+                isFloatingPanelMinimized = false;
+            } else {
+                container.style.display = 'none';
+                minimizeBtn.textContent = '+';
+                isFloatingPanelMinimized = true;
+            }
+        }
+
+        // Create bubble animation for reactions
+        function createReactionBubble(emoji) {
+            const screenArea = document.getElementById('participantGrid').style.display !== 'none' ?
+                document.getElementById('participantGrid') : document.getElementById('screenVideo');
+
+            if (!screenArea || screenArea.classList.contains('hidden')) return;
+
+            const bubble = document.createElement('div');
+            bubble.className = 'reaction-bubble';
+            bubble.textContent = emoji;
+
+            const rect = screenArea.getBoundingClientRect();
+            const randomX = Math.random() * (rect.width - 60);
+            const randomY = Math.random() * (rect.height - 60);
+
+            bubble.style.left = randomX + 'px';
+            bubble.style.top = randomY + 'px';
+
+            screenArea.appendChild(bubble);
+
+            setTimeout(() => {
+                if (bubble.parentNode) {
+                    bubble.parentNode.removeChild(bubble);
+                }
+            }, 3000);
+        }
+
+        // FIXED: Update main video area layout to prevent participant clearing
+        function updateMainVideoArea() {
+            const participantGrid = document.getElementById('participantGrid');
+            const screenVideo = document.getElementById('screenVideo');
+            const floatingPanel = document.getElementById('floatingParticipantPanel');
+
+            if (isSharing) {
+                participantGrid.style.display = 'none';
+                screenVideo.classList.remove('hidden');
+                floatingPanel.style.display = 'flex';
+                updateFloatingParticipants();
+            } else {
+                participantGrid.style.display = 'grid';
+                screenVideo.classList.add('hidden');
+                floatingPanel.style.display = 'none';
+                updateParticipantGrid();
+            }
+        }
+
+        // FIXED: Update participant grid display - prevents clearing on reactions
+        function updateParticipantGrid() {
+            const participantGrid = document.getElementById('participantGrid');
+
+            // Only clear if we need to rebuild completely
+            const existingContainers = participantGrid.querySelectorAll('.grid-video-container');
+            const expectedParticipants = Object.keys(peers).length + (localStream ? 1 : 0);
+
+            if (existingContainers.length !== expectedParticipants) {
+                participantGrid.innerHTML = '';
+
+                // Add local video to grid
+                if (localStream) {
+                    const localContainer = document.createElement('div');
+                    localContainer.className = 'grid-video-container';
+                    localContainer.id = 'local-grid-container';
+
+                    const localVideoClone = document.createElement('video');
+                    localVideoClone.srcObject = localStream;
+                    localVideoClone.autoplay = true;
+                    localVideoClone.muted = true;
+                    localVideoClone.playsInline = true;
+
+                    const localName = document.createElement('div');
+                    localName.className = 'grid-participant-name';
+                    localName.textContent = userName + ' (You)';
+
+                    localContainer.appendChild(localVideoClone);
+                    localContainer.appendChild(localName);
+                    participantGrid.appendChild(localContainer);
+                }
+
+                // Add remote videos to grid
+                Object.keys(peers).forEach(peerId => {
+                    const remoteVideo = document.getElementById(`remote-${peerId}`);
+                    const remoteName = document.getElementById(`name-${peerId}`);
+
+                    if (remoteVideo && remoteVideo.srcObject) {
+                        const gridContainer = document.createElement('div');
+                        gridContainer.className = 'grid-video-container';
+                        gridContainer.id = `grid-container-${peerId}`;
+
+                        const gridVideo = document.createElement('video');
+                        gridVideo.srcObject = remoteVideo.srcObject;
+                        gridVideo.autoplay = true;
+                        gridVideo.playsInline = true;
+
+                        const gridName = document.createElement('div');
+                        gridName.className = 'grid-participant-name';
+                        gridName.textContent = remoteName ? remoteName.textContent : `Participant ${peerId}`;
+
+                        gridContainer.appendChild(gridVideo);
+                        gridContainer.appendChild(gridName);
+                        participantGrid.appendChild(gridContainer);
+                    }
+                });
+            }
+        }
+
+        // Update floating participants during screen sharing
+        function updateFloatingParticipants() {
+            const floatingContainer = document.getElementById('floatingParticipantsContainer');
+            floatingContainer.innerHTML = '';
+
+            // Add local video to floating panel
+            if (localStream) {
+                const localItem = document.createElement('div');
+                localItem.className = 'floating-video-item';
+
+                const localVideo = document.createElement('video');
+                localVideo.srcObject = localStream;
+                localVideo.autoplay = true;
+                localVideo.muted = true;
+                localVideo.playsInline = true;
+
+                const localName = document.createElement('div');
+                localName.className = 'floating-video-name';
+                localName.textContent = userName + ' (You)';
+
+                localItem.appendChild(localVideo);
+                localItem.appendChild(localName);
+                floatingContainer.appendChild(localItem);
+            }
+
+            // Add remote videos to floating panel
+            Object.keys(peers).forEach(peerId => {
+                const remoteVideo = document.getElementById(`remote-${peerId}`);
+                const remoteName = document.getElementById(`name-${peerId}`);
+
+                if (remoteVideo && remoteVideo.srcObject) {
+                    const floatingItem = document.createElement('div');
+                    floatingItem.className = 'floating-video-item';
+
+                    const floatingVideo = document.createElement('video');
+                    floatingVideo.srcObject = remoteVideo.srcObject;
+                    floatingVideo.autoplay = true;
+                    floatingVideo.playsInline = true;
+
+                    const floatingName = document.createElement('div');
+                    floatingName.className = 'floating-video-name';
+                    floatingName.textContent = remoteName ? remoteName.textContent : `Participant ${peerId}`;
+
+                    floatingItem.appendChild(floatingVideo);
+                    floatingItem.appendChild(floatingName);
+                    floatingContainer.appendChild(floatingItem);
+                }
+            });
+        }
+
+        // Chat dragging functionality
+        function initializeChatDragging() {
+            const chatPopup = document.getElementById('chatPopup');
+            const chatHeader = document.getElementById('chatHeader');
+
+            chatHeader.addEventListener('mousedown', (e) => {
+                isDraggingChat = true;
+                const rect = chatPopup.getBoundingClientRect();
+                chatDragOffsetX = e.clientX - rect.left;
+                chatDragOffsetY = e.clientY - rect.top;
+                chatPopup.style.cursor = 'grabbing';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDraggingChat) return;
+
+                const chatPopup = document.getElementById('chatPopup');
+                let newX = e.clientX - chatDragOffsetX;
+                let newY = e.clientY - chatDragOffsetY;
+
+                const maxX = window.innerWidth - chatPopup.offsetWidth;
+                const maxY = window.innerHeight - chatPopup.offsetHeight;
+
+                newX = Math.max(0, Math.min(newX, maxX));
+                newY = Math.max(0, Math.min(newY, maxY));
+
+                chatPopup.style.left = newX + 'px';
+                chatPopup.style.top = newY + 'px';
+                chatPopup.style.right = 'auto';
+                chatPopup.style.transform = 'none';
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDraggingChat) {
+                    isDraggingChat = false;
+                    const chatPopup = document.getElementById('chatPopup');
+                    chatPopup.style.cursor = 'move';
+                }
+            });
+        }
+
+        // Floating panel dragging functionality
+        function initializeFloatingPanelDragging() {
+            const floatingPanel = document.getElementById('floatingParticipantPanel');
+            const panelHeader = document.getElementById('floatingPanelHeader');
+
+            panelHeader.addEventListener('mousedown', (e) => {
+                isDraggingPanel = true;
+                const rect = floatingPanel.getBoundingClientRect();
+                panelDragOffsetX = e.clientX - rect.left;
+                panelDragOffsetY = e.clientY - rect.top;
+                floatingPanel.style.cursor = 'grabbing';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDraggingPanel) return;
+
+                const floatingPanel = document.getElementById('floatingParticipantPanel');
+                let newX = e.clientX - panelDragOffsetX;
+                let newY = e.clientY - panelDragOffsetY;
+
+                const maxX = window.innerWidth - floatingPanel.offsetWidth;
+                const maxY = window.innerHeight - floatingPanel.offsetHeight;
+
+                newX = Math.max(0, Math.min(newX, maxX));
+                newY = Math.max(0, Math.min(newY, maxY));
+
+                floatingPanel.style.left = newX + 'px';
+                floatingPanel.style.top = newY + 'px';
+                floatingPanel.style.transform = 'none';
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDraggingPanel) {
+                    isDraggingPanel = false;
+                    const floatingPanel = document.getElementById('floatingParticipantPanel');
+                    floatingPanel.style.cursor = 'move';
+                }
+            });
+        }
+
+        // Initialize audio controls
+        function initializeAudioControls() {
+            const micVolumeSlider = document.getElementById('micVolumeSlider');
+            const micVolumeValue = document.getElementById('micVolumeValue');
+
+            micVolumeSlider.addEventListener('input', (e) => {
+                const volume = e.target.value;
+                micVolumeValue.textContent = volume + '%';
+                updateMicrophoneVolume(volume);
+            });
+
+            const speakerVolumeSlider = document.getElementById('speakerVolumeSlider');
+            const speakerVolumeValue = document.getElementById('speakerVolumeValue');
+
+            speakerVolumeSlider.addEventListener('input', (e) => {
+                const volume = e.target.value;
+                speakerVolumeValue.textContent = volume + '%';
+                updateSpeakerVolume(volume);
+            });
+
+            const audioMonitoringToggle = document.getElementById('audioMonitoringToggle');
+            audioMonitoringToggle.addEventListener('change', (e) => {
+                toggleAudioMonitoring(e.target.checked);
+            });
+        }
+
+        // Authentication functions
+        function showModal(modalId) {
+            document.getElementById(modalId).style.display = 'block';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            const modal = document.getElementById(modalId);
+            const inputs = modal.querySelectorAll('input');
+            inputs.forEach(input => {
+                if (input.type !== 'checkbox') input.value = '';
+                else input.checked = false;
+            });
+            const errorDivs = modal.querySelectorAll('.error-message, .success-message');
+            errorDivs.forEach(div => div.classList.add('hidden'));
+        }
+
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+
+        function togglePasswordVisibility(inputId, show) {
+            const input = document.getElementById(inputId);
+            input.type = show ? 'text' : 'password';
+        }
+
+        function showError(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.classList.remove('hidden');
+        }
+
+        function showSuccess(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.classList.remove('hidden');
+        }
+
+        function showForgotPassword() {
+            closeModal('loginModal');
+            showModal('forgotPasswordModal');
+        }
+
+        // Host password verification
+        function verifyHostPassword() {
+            const enteredPassword = document.getElementById('hostPasswordInput').value.trim();
+
+            if (!enteredPassword) {
+                showError('hostPasswordError', 'Please enter the host password or code');
+                return;
+            }
+
+            if (currentMeetingInfo && currentMeetingInfo.hostPassword && enteredPassword === currentMeetingInfo.hostPassword) {
+                closeModal('hostPasswordModal');
+                if (selectedRole === 'host') {
+                    isHost = true;
+                    isCoHost = false;
+                    joinRoom(currentMeetingCode, currentMeetingInfo.scheduledTime, false, currentMeetingInfo.title, true, currentMeetingInfo.hostId);
+                } else if (selectedRole === 'cohost') {
+                    isHost = false;
+                    isCoHost = true;
+                    joinRoom(currentMeetingCode, currentMeetingInfo.scheduledTime, false, currentMeetingInfo.title, false, currentMeetingInfo.hostId, 'cohost');
+                }
+            } else {
+                showError('hostPasswordError', 'Invalid host password or code. Please try again.');
+            }
+        }
+
+        function showHostPasswordInputForJoin() {
+            document.getElementById('hostPasswordTitle').textContent = '🔐 Host Password Required';
+            document.getElementById('hostPasswordDescription').textContent = 'Please enter the host password to join as host or co-host:';
+            document.getElementById('hostPasswordError').classList.add('hidden');
+            document.getElementById('hostPasswordInput').value = '';
+            showModal('hostPasswordModal');
+        }
+
+        function verifyHostPasswordForJoin() {
+            const enteredPassword = document.getElementById('hostPasswordInput').value.trim();
+
+            if (!enteredPassword) {
+                showError('hostPasswordError', 'Please enter the host password');
+                return;
+            }
+
+            providedHostPassword = enteredPassword;
+            closeModal('hostPasswordModal');
+
+            if (selectedRole === 'host') {
+                isHost = true;
+                isCoHost = false;
+                joinRoom(currentMeetingCode, currentMeetingInfo ? currentMeetingInfo.scheduledTime : null, false, currentMeetingInfo ? currentMeetingInfo.title : '', true, currentMeetingInfo ? currentMeetingInfo.hostId : null);
+            } else if (selectedRole === 'cohost') {
+                isHost = false;
+                isCoHost = true;
+                joinRoom(currentMeetingCode, currentMeetingInfo ? currentMeetingInfo.scheduledTime : null, false, currentMeetingInfo ? currentMeetingInfo.title : '', false, currentMeetingInfo ? currentMeetingInfo.hostId : null, 'cohost');
+            }
+        }
+
+        async function signup() {
+            const name = document.getElementById('signupName').value.trim();
+            const email = document.getElementById('signupEmail').value.trim();
+            const password = document.getElementById('signupPassword').value;
+
+            if (!name || !email || !password) {
+                showError('signupError', 'Please fill in all fields');
+                return;
+            }
+
+            try {
+                // Show loading state
+                const signupBtn = document.getElementById('signupBtn');
+                const originalText = signupBtn.textContent;
+                signupBtn.innerHTML = '<span class="loading"></span> Creating Account...';
+                signupBtn.disabled = true;
+
+                const response = await fetch('/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ full_name: name, email, password })
+                });
+
+                const result = await response.json();
+
+                // Restore button
+                signupBtn.textContent = originalText;
+                signupBtn.disabled = false;
+
+                if (result.error) {
+                    showError('signupError', result.error);
+                } else {
+                    showSuccess('signupSuccess', '✅ Account created successfully! You can now sign in.');
+                    setTimeout(() => {
+                        closeModal('signupModal');
+                        showModal('loginModal');
+                    }, 2000);
+                }
+            } catch (err) {
+                // Restore button
+                const signupBtn = document.getElementById('signupBtn');
+                signupBtn.textContent = '✨ Sign Up';
+                signupBtn.disabled = false;
+                showError('signupError', 'Network error. Please try again.');
+            }
+        }
+
+        async function login() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            if (!email || !password) {
+                showError('loginError', 'Please enter email and password');
+                return;
+            }
+
+            try {
+                // Show loading state
+                const loginBtn = document.getElementById('loginBtn');
+                const originalText = loginBtn.textContent;
+                loginBtn.innerHTML = '<span class="loading"></span> Signing In...';
+                loginBtn.disabled = true;
+
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const result = await response.json();
+
+                // Restore button
+                loginBtn.textContent = originalText;
+                loginBtn.disabled = false;
+
+                if (result.error) {
+                    showError('loginError', result.error);
+                } else {
+                    authToken = result.token;
+                    loggedInUser = { name: result.name, email, id: result.user_id };
+                    localStorage.setItem('authToken', authToken);
+                    localStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
+                    closeModal('loginModal');
+                    showLoggedInState();
+                }
+            } catch (err) {
+                // Restore button
+                const loginBtn = document.getElementById('loginBtn');
+                loginBtn.textContent = '🚀 Sign In';
+                loginBtn.disabled = false;
+                showError('loginError', 'Network error. Please try again.');
+            }
+        }
+
+        async function forgotPassword() {
+            const email = document.getElementById('forgotEmail').value.trim();
+
+            if (!email) {
+                showError('forgotError', 'Please enter your email');
+                return;
+            }
+
+            try {
+                const response = await fetch('/forgot_password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+
+                const result = await response.json();
+
+                if (result.error) {
+                    showError('forgotError', result.error);
+                } else {
+                    showSuccess('forgotSuccess', `Reset token: ${result.reset_token} (In production, this would be sent via email)`);
+                    document.getElementById('resetTokenSection').classList.remove('hidden');
+                }
+            } catch (err) {
+                showError('forgotError', 'Network error. Please try again.');
+            }
+        }
+
+        async function resetPassword() {
+            const token = document.getElementById('resetToken').value.trim();
+            const newPassword = document.getElementById('newPassword').value;
+
+            if (!token || !newPassword) {
+                showError('forgotError', 'Please enter reset token and new password');
+                return;
+            }
+
+            try {
+                const response = await fetch('/reset_password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, new_password: newPassword })
+                });
+
+                const result = await response.json();
+
+                if (result.error) {
+                    showError('forgotError', result.error);
+                } else {
+                    showSuccess('forgotSuccess', '✅ Password reset successful! You can now sign in with your new password.');
+                    setTimeout(() => {
+                        closeModal('forgotPasswordModal');
+                        showModal('loginModal');
+                    }, 2000);
+                }
+            } catch (err) {
+                showError('forgotError', 'Network error. Please try again.');
+            }
+        }
+
+        async function loadUserMeetings() {
+            if (!authToken) return;
+
+            try {
+                const response = await fetch('/user_meetings', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                const result = await response.json();
+                const meetingsList = document.getElementById('myMeetingsList');
+
+                if (result.error) {
+                    meetingsList.innerHTML = '<p>❌ Error loading meetings</p>';
+                    return;
+                }
+
+                if (result.meetings.length === 0) {
+                    meetingsList.innerHTML = '<p>📝 No meetings found. Create your first meeting below!</p>';
+                    return;
+                }
+
+                const sortedMeetings = result.meetings.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+                const now = new Date();
+                let currentMeeting = null;
+                let lastMeeting = null;
+
+                for (let meeting of sortedMeetings) {
+                    const endTime = new Date(meeting.endTime);
+                    if (endTime > now && !currentMeeting) {
+                        currentMeeting = meeting;
+                    } else if (!lastMeeting) {
+                        lastMeeting = meeting;
+                        break;
+                    }
+                }
+
+                meetingsList.innerHTML = '';
+
+                if (currentMeeting) {
+                    const meetingDiv = createMeetingItem(currentMeeting, '🔴 Current Meeting');
+                    meetingsList.appendChild(meetingDiv);
+                }
+
+                if (lastMeeting && (!currentMeeting || lastMeeting.code !== currentMeeting.code)) {
+                    const meetingDiv = createMeetingItem(lastMeeting, '📋 Last Meeting');
+                    meetingsList.appendChild(meetingDiv);
+                }
+
+                if (!currentMeeting && !lastMeeting) {
+                    meetingsList.innerHTML = '<p> 📝No recent meetings found.</p>';
+                }
+            } catch (err) {
+                console.error('Error loading meetings:', err);
+                document.getElementById('myMeetingsList').innerHTML = '<p>❌ Error loading meetings</p>';
+            }
+        }
+
+        function createMeetingItem(meeting, label) {
+            const meetingDiv = document.createElement('div');
+            meetingDiv.className = 'meeting-item';
+
+            const startTime = new Date(meeting.startTime);
+            const endTime = new Date(meeting.endTime);
+            const now = new Date();
+            const hasEnded = now > endTime;
+
+            meetingDiv.innerHTML = `
+                <div class="meeting-info">
+                    <h5>${meeting.title} <span style="color: #666; font-size: 12px;">(${label})</span></h5>
+                    <p>🔢 Code: ${meeting.code}</p>
+                    <p>📅 ${formatDateTime(startTime)} - ${formatTime(endTime)}</p>
+                    <p style="color: ${hasEnded ? '#dc3545' : '#28a745'};"> ${hasEnded ? '❌ Ended' : 'Scheduled'} </p>
+                </div>
+                <div class="meeting-actions">
+                    <button onclick="copyToClipboard('temp-${meeting.code}')" style="background: #17a2b8;">Copy Link</button>
+                    <input id="temp-${meeting.code}" value="${meeting.link}" style="position: absolute; left: -9999px;">
+                    ${!hasEnded ? `<button onclick="joinMyMeeting('${meeting.code}', '${meeting.title}')" style="background: #28a745;">Join as Host</button>` : ''}
+                </div>
+            `;
+
+            return meetingDiv;
+        }
+
+        function joinMyMeeting(code, title) {
+            document.getElementById('room').value = code;
+            document.getElementById('userName').value = loggedInUser.name;
+            isHost = true;
+            isCoHost = false;
+            joinRoom(code, null, true, title);
+        }
+
+        function showLoggedInState() {
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('loginPanel').classList.remove('hidden');
+            document.getElementById('loggedInUserName').textContent = loggedInUser.name;
+            document.getElementById('userName').value = loggedInUser.name;
+            loadUserMeetings();
+        }
+
+        function logout() {
+            authToken = null;
+            loggedInUser = null;
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('loggedInUser');
+
+            document.getElementById('authSection').classList.remove('hidden');
+            document.getElementById('loginPanel').classList.add('hidden');
+            document.getElementById('hostControlPanel').classList.add('hidden');
+            document.getElementById('userName').value = '';
+
+            // DISABLE FULLSCREEN WHEN LOGGING OUT
+            disableFullscreenMeeting();
+        }
+
+        function checkExistingSession() {
+            const storedToken = localStorage.getItem('authToken');
+            const storedUser = localStorage.getItem('loggedInUser');
+
+            if (storedToken && storedUser) {
+                authToken = storedToken;
+                loggedInUser = JSON.parse(storedUser);
+                showLoggedInState();
+            }
+        }
+
+        // Recording functions
+        function startRecording() {
+            if (!localStream) {
+                alert('No media stream available for recording');
+                return;
+            }
+
+            try {
+                const screenVideo = document.getElementById('screenVideo');
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                canvas.width = screenVideo.videoWidth || 1280;
+                canvas.height = screenVideo.videoHeight || 720;
+
+                const canvasStream = canvas.captureStream(30);
+                const tracks = [];
+
+                if (localStream) {
+                    const audioTracks = localStream.getAudioTracks();
+                    tracks.push(...audioTracks);
+                }
+
+                tracks.push(...canvasStream.getVideoTracks());
+                const combinedStream = new MediaStream(tracks);
+
+                const drawFrame = () => {
+                    if (isRecording) {
+                        ctx.drawImage(screenVideo, 0, 0, canvas.width, canvas.height);
+                        requestAnimationFrame(drawFrame);
+                    }
+                };
+
+                drawFrame();
+
+                mediaRecorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm;codecs=vp9' });
+                recordedChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    uploadRecording(blob);
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                recordingStartTime = Date.now();
+
+                document.getElementById('recordBtn').textContent = '⏹️ Stop Recording';
+                document.getElementById('recordBtn').classList.add('recording');
+                document.getElementById('recordingStatus').classList.remove('hidden');
+
+                recordingTimer = setInterval(updateRecordingTime, 1000);
+                showRecordingIndicator();
+
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'recording-started', payload: { from: userName, message: '🔴 Host has started recording the meeting' } }));
+                }
+            } catch (err) {
+                console.error('Error starting recording:', err);
+                alert('❌ Failed to start recording: ' + err.message);
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+
+                document.getElementById('recordBtn').textContent = '🔴 Start Recording';
+                document.getElementById('recordBtn').classList.remove('recording');
+                document.getElementById('recordingStatus').classList.add('hidden');
+
+                if (recordingTimer) {
+                    clearInterval(recordingTimer);
+                    recordingTimer = null;
+                }
+
+                hideRecordingIndicator();
+
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'recording-stopped', payload: { from: userName, message: '⏹️ Host has stopped recording the meeting' } }));
+                }
+            }
+        }
+
+        function showRecordingIndicator() {
+            if (!recordingIndicator) {
+                recordingIndicator = document.createElement('div');
+                recordingIndicator.className = 'recording-indicator';
+                recordingIndicator.innerHTML = '🔴 Recording in Progress';
+                document.body.appendChild(recordingIndicator);
+            }
+        }
+
+        function hideRecordingIndicator() {
+            if (recordingIndicator) {
+                recordingIndicator.remove();
+                recordingIndicator = null;
+            }
+        }
+
+        function updateRecordingTime() {
+            if (recordingStartTime) {
+                const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                document.getElementById('recordingTime').textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }
+
+        async function uploadRecording(blob) {
+            if (!roomName) return;
+
+            try {
+                const reader = new FileReader();
+                reader.onload = async () => {
+                    const base64Data = reader.result.split(',')[1];
+
+                    const response = await fetch('/upload_recording', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code: roomName, blob: base64Data })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showSuccessNotification('✅ Recording saved successfully!');
+                    } else {
+                        alert('❌ Failed to save recording: ' + result.error);
+                    }
+                };
+
+                reader.readAsDataURL(blob);
+            } catch (err) {
+                console.error('❌ Error uploading recording:', err);
+                alert('Failed to upload recording');
+            }
+        }
+
+        async function exportParticipants() {
+            if (!roomName) return;
+
+            try {
+                const response = await fetch(`/export_participants?code=${roomName}`);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `participants_${roomName}.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    showSuccessNotification('✅ Participants data exported successfully!');
+                } else {
+                    alert('❌ Failed to export participants data');
+                }
+            } catch (err) {
+                console.error('Error exporting participants:', err);
+                alert('❌ Failed to export participants data');
+            }
+        }
+
+        async function viewRecordings() {
+            if (!roomName) return;
+
+            try {
+                const response = await fetch(`/recordings?code=${roomName}`);
+                const result = await response.json();
+
+                if (result.recordings && result.recordings.length > 0) {
+                    let recordingsList = '📹 Available recordings:\n\n';
+                    result.recordings.forEach((recording, index) => {
+                        recordingsList += `${index + 1}. ${recording.filename} (${recording.uploaded_at})\n`;
+                    });
+
+                    const choice = prompt(recordingsList + '\nEnter the number of the recording to download (or cancel):');
+                    if (choice && !isNaN(choice)) {
+                        const recordingIndex = parseInt(choice) - 1;
+                        if (recordingIndex >= 0 && recordingIndex < result.recordings.length) {
+                            const filename = result.recordings[recordingIndex].filename;
+                            window.open(`/download_recording?file=${filename}`, '_blank');
+                        }
+                    }
+                } else {
+                    alert('📹 No recordings found for this meeting');
+                }
+            } catch (err) {
+                console.error('Error fetching recordings:', err);
+                alert('❌ Failed to fetch recordings');
+            }
+        }
+
+        // Chat functions
+        function toggleChatPopup() {
+            const chatPopup = document.getElementById('chatPopup');
+            const isVisible = chatPopup.style.display === 'block';
+
+            if (isVisible) {
+                chatPopup.style.display = 'none';
+                document.getElementById('chatToggleBtn').textContent = '💬 Show Chat';
+                isChatOpen = false;
+            } else {
+                chatPopup.style.display = 'block';
+                document.getElementById('chatToggleBtn').textContent = '💬 Hide Chat';
+                isChatOpen = true;
+                unreadCount = 0;
+                updateChatBadge();
+            }
+        }
+
+        // Reactions functions
+        function toggleReactionsPopup() {
+            const reactionsPopup = document.getElementById('reactionsPopup');
+            const isVisible = reactionsPopup.style.display === 'block';
+
+            if (isVisible) {
+                reactionsPopup.style.display = 'none';
+                isReactionsOpen = false;
+            } else {
+                reactionsPopup.style.display = 'block';
+                isReactionsOpen = true;
+            }
+        }
+
+        function insertEmoji(emoji) {
+            const chatInput = document.getElementById('chatInput');
+            chatInput.value += emoji;
+            chatInput.focus();
+        }
+
+        // Toggle emoji popup
+        document.getElementById('emojiToggleBtn').addEventListener('click', () => {
+            const popup = document.getElementById('emojiPopup');
+            popup.style.display = popup.style.display === 'block' ? 'none' : 'block';
+        });
+
+        // Close emoji popup when clicking outside
+        document.addEventListener('click', (e) => {
+            const emojiPopup = document.getElementById('emojiPopup');
+            const emojiBtn = document.getElementById('emojiToggleBtn');
+            if (!emojiPopup.contains(e.target) && e.target !== emojiBtn) {
+                emojiPopup.style.display = 'none';
+            }
+        });
+
+        // Utility functions
+        function copyToClipboard(id) {
+            const input = document.getElementById(id);
+            input.select();
+            input.setSelectionRange(0, 99999);
+
+            navigator.clipboard.writeText(input.value).then(() => {
+                showSuccessNotification("Copied to clipboard! 📋");
+            }).catch(() => {
+                document.execCommand('copy');
+                showSuccessNotification("Copied to clipboard! 📋");
+            });
+        }
+
+        function copyMeetingDetails() {
+            const code = document.getElementById('hostControlCode').value;
+            const link = document.getElementById('hostControlLink').value;
+            const password = document.getElementById('hostControlPassword').value;
+            const scheduledTime = document.getElementById('hostScheduledTime').textContent;
+            const endTime = document.getElementById('hostEndTime').textContent;
+            const title = document.getElementById('hostControlMeetingTitle').textContent;
+
+            const details = `🎥 Meeting Details: 📋 Title: ${title} 🔢 Code: ${code} 🔗 Link: ${link} 🔐 Host Password: ${password || 'Not set'} 📅 Time: ${scheduledTime} - ${endTime} Share this information with participants.`;
+
+            navigator.clipboard.writeText(details).then(() => {
+                showSuccessNotification("Meeting details copied to clipboard! 📋");
+            }).catch(() => {
+                const textArea = document.createElement('textarea');
+                textArea.value = details;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showSuccessNotification("Meeting details copied to clipboard! 📋");
+            });
+        }
+
+        // IMPROVED appendMessage function with delete functionality
+        function appendMessage(item) {
+            const div = document.getElementById('messages');
+            const messageEl = document.createElement('div');
+            messageEl.className = 'chat-message';
+
+            const messageId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            messageEl.setAttribute('data-message-id', messageId);
+
+            if (item.from === userName) {
+                messageEl.classList.add('own-message');
+            }
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'chat-message-content';
+
+            if (item.file) {
+                const a = document.createElement('a');
+                a.href = item.file;
+                a.target = '_blank';
+                a.style.color = '#1976d2';
+                a.textContent = item.filename || 'Shared File';
+                contentDiv.innerHTML = `<strong>${item.from}:</strong> `;
+                contentDiv.appendChild(a);
+            } else {
+                const msg = item.text || item.reaction;
+                contentDiv.innerHTML = `<strong>${item.from}:</strong> ${msg}`;
+            }
+
+            messageEl.appendChild(contentDiv);
+
+            if (item.from === userName || isHost || isCoHost) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'chat-message-delete';
+                deleteBtn.innerHTML = '×';
+                deleteBtn.title = 'Delete message';
+                deleteBtn.onclick = () => deleteMessage(messageId, messageEl);
+                messageEl.appendChild(deleteBtn);
+            }
+
+            div.appendChild(messageEl);
+            div.scrollTop = div.scrollHeight;
+
+            chatMessages.push({
+                id: messageId,
+                element: messageEl,
+                from: item.from,
+                content: item.text || item.reaction || item.filename
+            });
+
+            if (item.text && !isChatOpen && item.from !== userName) {
+                unreadCount++;
+                updateChatBadge();
+            }
+
+            if (item.reaction) {
+                if (item.reaction.includes('Raised Hand')) {
+                    flashReaction('✋');
+                } else {
+                    createReactionBubble(item.reaction);
+                }
+            }
+        }
+
+        function deleteMessage(messageId, messageElement) {
+            if (confirm('🗑️ Are you sure you want to delete this message?')) {
+                messageElement.remove();
+                chatMessages = chatMessages.filter(msg => msg.id !== messageId);
+
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'message-deleted',
+                        payload: {
+                            messageId: messageId,
+                            from: userName
+                        }
+                    }));
+                }
+            }
+        }
+
+        function updateChatBadge() {
+            const chatBtn = document.getElementById('chatToggleBtn');
+            let badge = chatBtn.querySelector('.badge');
+
+            if (!badge && unreadCount > 0) {
+                badge = document.createElement('span');
+                badge.className = 'badge';
+                chatBtn.appendChild(badge);
+            }
+
+            if (badge) {
+                badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                badge.style.display = unreadCount > 0 ? 'flex' : 'none';
+            }
+        }
+
+        function flashReaction(emoji) {
+            const flash = document.createElement('div');
+            flash.className = 'reaction-flash';
+            flash.textContent = emoji;
+
+            const container = document.getElementById('participantGrid').style.display !== 'none' ?
+                document.getElementById('participantGrid') : document.getElementById('screenVideo');
+
+            if (container && !container.classList.contains('hidden')) {
+                container.appendChild(flash);
+                setTimeout(() => flash.remove(), 1400);
+            }
+        }
+
+        // Time and countdown functions
+        function formatTime(date) {
+            return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+        }
+
+        function formatDateTime(dateTimeString) {
+            const date = new Date(dateTimeString);
+            return date.toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+        }
+
+        function startCountdown(targetTime, elementId, isHost = false) {
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+
+            countdownInterval = setInterval(() => {
+                const now = new Date();
+                const diff = targetTime - now;
+
+                if (diff <= 0) {
+                    clearInterval(countdownInterval);
+                    if (isHost) {
+                        const element = document.getElementById(elementId);
+                        if (element) {
+                            element.innerHTML = '<span style="color: #28a745;">✅ Meeting Time Reached - Participants can now join!</span>';
+                        }
+                    } else {
+                        location.reload();
+                    }
+                    return;
+                }
+
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+                const countdownText = `⏰ Time until meeting starts: ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.textContent = countdownText;
+                }
+            }, 1000);
+        }
+
+        function checkMeetingTime(scheduledDateTime, endDateTime, roomCode) {
+            const now = new Date();
+            const scheduledTime = new Date(scheduledDateTime);
+            const endTime = new Date(endDateTime);
+
+            if (isHost || isCoHost) {
+                if (now < scheduledTime) {
+                    document.getElementById('hostScheduledTimeInMeeting').textContent = formatTime(scheduledTime);
+                    document.getElementById('hostEarlyAccess').classList.remove('hidden');
+                    startCountdown(scheduledTime, 'hostCountdownInMeeting', true);
+                }
+                return true;
+            } else {
+                if (now < scheduledTime) {
+                    document.getElementById('scheduledTime').textContent = formatTime(scheduledTime);
+                    document.getElementById('waitingRoom').classList.remove('hidden');
+                    document.getElementById('loginPanel').classList.add('hidden');
+                    startCountdown(scheduledTime, 'countdown', false);
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        // Role selection functions
+        function showRoleSelection(roomCode, meetingInfo) {
+            currentMeetingInfo = meetingInfo;
+            currentMeetingCode = roomCode;
+            document.getElementById('roleSelectionModal').style.display = 'block';
+
+            document.getElementById('joinAsParticipantBtn').onclick = () => {
+                closeModal('roleSelectionModal');
+                selectedRole = 'participant';
+                isHost = false;
+                isCoHost = false;
+                joinRoom(roomCode, meetingInfo.scheduledTime, false, meetingInfo.title, false);
+            };
+
+            document.getElementById('joinAsCoHostBtn').onclick = () => {
+                closeModal('roleSelectionModal');
+                selectedRole = 'cohost';
+                if (meetingInfo.hostPassword) {
+                    document.getElementById('hostPasswordTitle').textContent = '🤝 Co-Host Authentication Required';
+                    document.getElementById('hostPasswordDescription').textContent = 'Please enter the host password to join as co-host:';
+                    showModal('hostPasswordModal');
+                } else {
+                    showHostPasswordInputForJoin();
+                }
+            };
+
+            document.getElementById('joinAsHostBtn').onclick = () => {
+                closeModal('roleSelectionModal');
+                selectedRole = 'host';
+                if (meetingInfo.hostPassword) {
+                    document.getElementById('hostPasswordTitle').textContent = '👑 Host Authentication Required';
+                    document.getElementById('hostPasswordDescription').textContent = 'Please enter the host password or special host code to join as host:';
+                    showModal('hostPasswordModal');
+                } else {
+                    showHostPasswordInputForJoin();
+                }
+            };
+        }
+
+        // WebRTC functions
+        async function createPeerConnection(peerId) {
+            const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+
+            pc.onicecandidate = (event) => {
+                if (event.candidate && ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'ice-candidate', payload: { candidate: event.candidate, target: peerId, from: myId } }));
+                }
+            };
+
+            pc.ontrack = (event) => {
+                const remoteVideo = document.getElementById(`remote-${peerId}`) || createRemoteVideo(peerId);
+                if (event.streams && event.streams[0]) {
+                    remoteVideo.srcObject = event.streams[0];
+                    setTimeout(() => updateMainVideoArea(), 100);
+                }
+            };
+
+            if (localStream) {
+                localStream.getTracks().forEach(track => {
+                    pc.addTrack(track, localStream);
+                });
+            }
+
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => {
+                    pc.addTrack(track, screenStream);
+                });
+            }
+
+            peers[peerId] = pc;
+            return pc;
+        }
+
+        function createRemoteVideo(peerId) {
+            const container = document.createElement('div');
+            container.className = 'remote-video-container';
+            container.style.display = 'none';
+
+            const video = document.createElement('video');
+            video.id = `remote-${peerId}`;
+            video.autoplay = true;
+            video.playsInline = true;
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'remote-name';
+            nameSpan.id = `name-${peerId}`;
+            nameSpan.textContent = '';
+
+            container.appendChild(video);
+            container.appendChild(nameSpan);
+            document.getElementById('remoteVideos').appendChild(container);
+
+            return video;
+        }
+
+        async function makeOffer(peerId) {
+            const pc = await createPeerConnection(peerId);
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            ws.send(JSON.stringify({ type: 'offer', payload: { offer: offer, target: peerId, from: myId } }));
+        }
+
+        async function handleOffer(payload) {
+            const peerId = payload.from;
+            const pc = await createPeerConnection(peerId);
+            await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            ws.send(JSON.stringify({ type: 'answer', payload: { answer: answer, target: peerId, from: myId } }));
+        }
+
+        async function handleAnswer(payload) {
+            const pc = peers[payload.from];
+            if (pc) {
+                await pc.setRemoteDescription(new RTCSessionDescription(payload.answer));
+            }
+        }
+
+        async function handleIceCandidate(payload) {
+            const pc = peers[payload.from];
+            if (pc) {
+                await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+            }
+        }
+
+        function removeRemoteVideo(peerId) {
+            const video = document.getElementById(`remote-${peerId}`);
+            if (video && video.parentNode) {
+                video.parentNode.remove();
+            }
+            updateMainVideoArea();
+        }
+
+        // Meeting functions
+        async function joinRoom(roomCode, scheduledDateTime = null, skipTimeCheck = false, title = '', joinAsHost = false, hostId = null, role = 'participant') {
+            if (scheduledDateTime && !skipTimeCheck && !checkMeetingTime(scheduledDateTime, null, roomCode)) {
+                return;
+            }
+
+            roomName = roomCode;
+            meetingTitle = title;
+
+            if (meetingTitle) {
+                document.getElementById('meetingRoomTitle').textContent = meetingTitle;
+                document.getElementById('earlyAccessMeetingTitle').textContent = meetingTitle;
+            }
+
+            document.getElementById('roomName').textContent = roomCode;
+            document.getElementById('displayName').textContent = userName;
+
+            document.getElementById('loginPanel').classList.add('hidden');
+            document.getElementById('hostControlPanel').classList.add('hidden');
+            document.getElementById('waitingRoom').classList.add('hidden');
+            document.getElementById('meeting').classList.remove('hidden');
+
+            // ENABLE FULLSCREEN MODE FOR MEETING
+            enableFullscreenMeeting();
+
+            // INITIALIZE MEETING TIMER IF END TIME IS AVAILABLE
+            if (currentMeetingInfo && currentMeetingInfo.endTime) {
+                initializeMeetingTimer(currentMeetingInfo.endTime);
+            }
+
+            const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            ws = new WebSocket(`${scheme}://${window.location.host}/ws/${roomCode}`);
+
+            ws.onopen = () => {
+                console.log('Connected to meeting');
+                ws.send(JSON.stringify({ type: 'join', payload: { username: userName, isHost: isHost, joinAsHost: joinAsHost, hostId: hostId, role: role, isCoHost: isCoHost, host_password: providedHostPassword } }));
+                providedHostPassword = '';
+            };
+
+            ws.onclose = (e) => {
+                // DISABLE FULLSCREEN WHEN MEETING ENDS
+                disableFullscreenMeeting();
+
+                if (e.code === 1008) {
+                    if (e.reason === "Meeting has ended") {
+                        document.getElementById('meeting').classList.add('hidden');
+                        document.getElementById('endedMeetingTitle').textContent = meetingTitle || 'Unknown Meeting';
+                        document.getElementById('meetingEndedMessage').classList.remove('hidden');
+                    } else {
+                        alert(e.reason || "❌ Invalid code or meeting not started");
+                        location.reload();
+                    }
+                } else {
+                    console.log('WebSocket closed', e);
+                    setTimeout(() => {
+                        alert("🔌 Connection lost. Please refresh to reconnect.");
+                    }, 1000);
+                }
+            };
+
+            ws.onmessage = (e) => {
+                const { type, payload } = JSON.parse(e.data);
+
+                switch(type) {
+                    case 'error':
+                        if (payload.code === 'PASSWORD_REQUIRED') {
+                            showHostPasswordInputForJoin();
+                        } else if (payload.code === 'INVALID_PASSWORD') {
+                            showError('hostPasswordError', 'Invalid host password. Please try again.');
+                            showHostPasswordInputForJoin();
+                        } else {
+                            alert(payload.message || 'An error occurred');
+                        }
+                        break;
+
+                    case 'chat':
+                        appendMessage(payload);
+                        break;
+
+                    case 'reaction':
+                        appendMessage({ from: payload.from, reaction: payload.reaction });
+                        break;
+
+                    case 'hand-raised':
+                        participantHandRaised[payload.userId] = payload.raised;
+                        updateParticipantList(payload.users || [], payload.host);
+                        break;
+
+                    case 'message-deleted':
+                        const messageToDelete = document.querySelector(`[data-message-id="${payload.messageId}"]`);
+                        if (messageToDelete) {
+                            messageToDelete.remove();
+                            chatMessages = chatMessages.filter(msg => msg.id !== payload.messageId);
+                        }
+                        break;
+
+                    case 'participants':
+                        document.getElementById('participantCount').textContent = payload.count;
+                        document.getElementById('participantCountBadge2').textContent = payload.count;
+                        break;
+
+                    case 'user-list':
+                        updateParticipantList(payload.users, payload.host);
+                        const found = payload.users.find(u => u.name === userName);
+                        if (found) myId = found.id;
+
+                        payload.users.forEach(user => {
+                            if (user.id !== myId && !peers[user.id]) {
+                                makeOffer(user.id);
+                            }
+                        });
+
+                        setTimeout(() => updateMainVideoArea(), 100);
+                        break;
+
+                    case 'offer':
+                        handleOffer(payload);
+                        break;
+
+                    case 'answer':
+                        handleAnswer(payload);
+                        break;
+
+                    case 'ice-candidate':
+                        handleIceCandidate(payload);
+                        break;
+
+                    case 'mute-request':
+                        mutedByHost = true;
+                        muteLocalAudio(true, true);
+                        setTimeout(() => {
+                            alert('🔇 Host muted you. You can unmute yourself if needed.');
+                        }, 100);
+                        break;
+
+                    case 'unmute-request':
+                        mutedByHost = false;
+                        muteLocalAudio(false, false);
+                        break;
+
+                    case 'mute-all':
+                        mutedByHost = true;
+                        muteLocalAudio(true, true);
+                        setTimeout(() => {
+                            alert('🔇 Host muted everyone. You can unmute yourself if needed.');
+                        }, 100);
+                        break;
+
+                    case 'recording-started':
+                        if (!isHost && !isCoHost) {
+                            showRecordingIndicator();
+                            appendMessage({ from: 'System', text: payload.message });
+                        }
+                        break;
+
+                    case 'recording-stopped':
+                        if (!isHost && !isCoHost) {
+                            hideRecordingIndicator();
+                            appendMessage({ from: 'System', text: payload.message });
+                        }
+                        break;
+                }
+            };
+
+            try {
+                const audioConstraints = {
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        sampleRate: 44100,
+                        channelCount: 2
+                    },
+                    video: true
+                };
+
+                localStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+                document.getElementById('localVideo').srcObject = localStream;
+
+                await initializeAudioContext();
+                setupAudioMonitoring(localStream);
+                updateMainVideoArea();
+            } catch (err) {
+                console.log("Camera/microphone access denied:", err);
+                alert("📹 Please allow camera and microphone access for the best experience.");
+            }
+
+            if (isHost || isCoHost) {
+                document.getElementById('hostControlsBtn').classList.remove('hidden');
+
+                if (scheduledDateTime && !skipTimeCheck) {
+                    checkMeetingTime(scheduledDateTime, null, roomCode);
+                }
+            }
+        }
+
+        // FIXED: Update participant list to prevent clearing
+        function updateParticipantList(users, hostId) {
+            const participantList = document.getElementById('participantList');
+
+            // Only update the participant content, not the entire list
+            let participantContent = '<h4>👥 Participants</h4>';
+
+            users.forEach(user => {
+                const div = document.createElement('div');
+                div.className = 'participant';
+
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'participant-name';
+                nameSpan.textContent = user.name;
+
+                if (user.id === myId) nameSpan.textContent += ' (You)';
+
+                if (participantHandRaised[user.id]) {
+                    const handIndicator = document.createElement('span');
+                    handIndicator.className = 'hand-raised-indicator';
+                    handIndicator.textContent = '✋ Hand Raised';
+                    nameSpan.appendChild(handIndicator);
+                }
+
+                let roleLabel = '';
+                if (user.role === 'host' || user.isHost || (isHost && user.id === myId)) {
+                    roleLabel = 'Host';
+                } else if (user.role === 'cohost' || user.isCoHost || (isCoHost && user.id === myId)) {
+                    roleLabel = 'Co-Host';
+                }
+
+                if (roleLabel) {
+                    nameSpan.setAttribute('data-role', roleLabel);
+                }
+
+                div.appendChild(nameSpan);
+
+                const nameEl = document.getElementById(`name-${user.id}`);
+                if (nameEl) nameEl.textContent = user.name;
+
+                if ((isHost || isCoHost) && user.id !== myId) {
+                    const controlsDiv = document.createElement('div');
+                    controlsDiv.className = 'participant-controls';
+
+                    const muteBtn = document.createElement('button');
+                    muteBtn.className = 'mute-user-btn';
+                    muteBtn.textContent = participantMuteStates[user.id] ? '🔊 Unmute' : '🔇 Mute';
+
+                    muteBtn.onclick = () => {
+                        if (participantMuteStates[user.id]) {
+                            ws.send(JSON.stringify({ type: 'unmute-user', payload: { target: user.id } }));
+                            participantMuteStates[user.id] = false;
+                            muteBtn.textContent = '🔇 Mute';
+                            muteBtn.classList.remove('participant-muted');
+                        } else {
+                            ws.send(JSON.stringify({ type: 'mute-user', payload: { target: user.id } }));
+                            participantMuteStates[user.id] = true;
+                            muteBtn.textContent = '🔊 Unmute';
+                            muteBtn.classList.add('participant-muted');
+                        }
+                    };
+
+                    if (participantMuteStates[user.id]) {
+                        muteBtn.classList.add('participant-muted');
+                        muteBtn.textContent = '🔊 Unmute';
+                    }
+
+                    controlsDiv.appendChild(muteBtn);
+                    div.appendChild(controlsDiv);
+                }
+
+                participantContent += div.outerHTML;
+            });
+
+            // Only update if content has changed
+            if (participantList.innerHTML !== participantContent) {
+                participantList.innerHTML = participantContent;
+            }
+
+            Object.keys(peers).forEach(peerId => {
+                if (!users.some(u => u.id === peerId)) {
+                    try {
+                        peers[peerId].close();
+                    } catch (e) {}
+                    delete peers[peerId];
+                    removeRemoteVideo(peerId);
+                }
+            });
+        }
+
+        function muteLocalAudio(mute, fromHost = false) {
+            if (!localStream) return;
+
+            const audioTracks = localStream.getAudioTracks();
+            if (audioTracks.length > 0) {
+                audioTracks.forEach(track => {
+                    track.enabled = !mute;
+                });
+
+                const btn = document.getElementById('muteBtn');
+                btn.textContent = mute ? '🔊 Unmute' : '🔇 Mute';
+
+                if (fromHost && mute) {
+                    btn.classList.add('host-muted');
+                    btn.title = 'You were muted by the host';
+                } else {
+                    btn.classList.remove('host-muted');
+                    btn.style.background = mute ? '#d32f2f' : '#ff5722';
+                    btn.title = '';
+                }
+
+                const localVideo = document.getElementById('localVideo');
+                if (mute) {
+                    localVideo.classList.add('muted');
+                } else {
+                    localVideo.classList.remove('muted');
+                    mutedByHost = false;
+                }
+
+                isMuted = mute;
+                updateMainVideoArea();
+            }
+        }
+
+        function toggleLocalVideo() {
+            if (!localStream) return;
+
+            const videoTracks = localStream.getVideoTracks();
+            if (videoTracks.length > 0) {
+                const enabled = !videoTracks[0].enabled;
+                videoTracks.forEach(track => track.enabled = enabled);
+
+                const btn = document.getElementById('videoBtn');
+                btn.textContent = enabled ? '📹 Stop Video' : '📹 Start Video';
+                btn.style.background = enabled ? '#ff5722' : '#d32f2f';
+
+                const localVideo = document.getElementById('localVideo');
+                if (!enabled) {
+                    localVideo.classList.add('video-off');
+                } else {
+                    localVideo.classList.remove('video-off');
+                }
+
+                isVideoOff = !enabled;
+                updateMainVideoArea();
+            }
+        }
+
+        // Event listeners
+        document.getElementById('showLoginBtn').onclick = () => showModal('loginModal');
+        document.getElementById('showSignupBtn').onclick = () => showModal('signupModal');
+        document.getElementById('loginBtn').onclick = login;
+        document.getElementById('signupBtn').onclick = signup;
+        document.getElementById('logoutBtn').onclick = logout;
+        document.getElementById('logoutFromDetailBtn').onclick = logout;
+        document.getElementById('logoutFromMeetingBtn').onclick = logout;
+        document.getElementById('forgotPasswordBtn').onclick = forgotPassword;
+        document.getElementById('resetPasswordBtn').onclick = resetPassword;
+
+        // NEW: Popup toggle button listeners
+        document.getElementById('audioSettingsBtn').onclick = toggleAudioSettings;
+        document.getElementById('hostControlsBtn').onclick = toggleHostControls;
+        document.getElementById('participantsToggleBtn2').onclick = toggleParticipants;
+
+        document.getElementById('createNewMeetingBtn').onclick = () => {
+            showModal('createMeetingModal');
+        };
+
+        // Close modals when clicking outside
+        window.onclick = (event) => {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+
+            const reactionsPopup = document.getElementById('reactionsPopup');
+            if (event.target !== reactionsPopup && !reactionsPopup.contains(event.target) && event.target.id !== 'reactionsBtn' && isReactionsOpen) {
+                toggleReactionsPopup();
+            }
+        };
+
+        document.getElementById('createBtn').onclick = async () => {
+            if (!authToken) {
+                alert('🔐 Please sign in first to create a meeting');
+                return;
+            }
+
+            const date = document.getElementById('meetingDate').value;
+            const startTime = document.getElementById('meetingStartTime').value;
+            const endTime = document.getElementById('meetingEndTime').value;
+            const title = document.getElementById('meetingTitle').value.trim();
+            const hostPasswordCreate = document.getElementById('hostPasswordCreate').value.trim();
+
+            userName = document.getElementById('userName').value.trim();
+
+            if (!title) {
+                alert('📋 Meeting title is required');
+                return;
+            }
+
+            if (!hostPasswordCreate) {
+                alert('🔐 Host password is required for security');
+                return;
+            }
+
+            if (!date || !startTime || !endTime || !userName) {
+                alert('📝 Please fill all required fields (Name, Date, Start Time, End Time)');
+                return;
+            }
+
+            try {
+                // Show loading state
+                const createBtn = document.getElementById('createBtn');
+                const originalText = createBtn.textContent;
+                createBtn.innerHTML = '<span class="loading"></span> Creating Meeting...';
+                createBtn.disabled = true;
+
+                const response = await fetch('/create_meeting', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ date, startTime, endTime, title, hostPassword: hostPasswordCreate })
+                });
+
+                const result = await response.json();
+
+                // Restore button
+                createBtn.textContent = originalText;
+                createBtn.disabled = false;
+
+                if (result.error) {
+                    alert(result.error);
+                    return;
+                }
+
+                createdMeetingCode = result.code;
+                meetingScheduledTime = `${date}T${startTime}`;
+                const meetingEndTime = `${date}T${endTime}`;
+                meetingTitle = title;
+                hostPassword = hostPasswordCreate;
+
+                isHost = true;
+                isCoHost = false;
+
+                closeModal('createMeetingModal');
+                document.getElementById('loginPanel').classList.add('hidden');
+
+                document.getElementById('hostControlCode').value = result.code;
+                document.getElementById('hostControlLink').value = result.link;
+                document.getElementById('hostControlPassword').value = hostPasswordCreate;
+                document.getElementById('hostControlMeetingTitle').textContent = title;
+                document.getElementById('hostScheduledTime').textContent = formatDateTime(meetingScheduledTime);
+                document.getElementById('hostEndTime').textContent = formatTime(new Date(meetingEndTime));
+
+                document.getElementById('hostControlPanel').classList.remove('hidden');
+
+                const scheduledTime = new Date(meetingScheduledTime);
+                startCountdown(scheduledTime, 'hostCountdown', true);
+
+                loadUserMeetings();
+                showSuccessNotification('Meeting created successfully!');
+
+            } catch (err) {
+                // Restore button
+                const createBtn = document.getElementById('createBtn');
+                createBtn.textContent = 'Create Meeting';
+                createBtn.disabled = false;
+                console.error('Error creating meeting:', err);
+                alert('Error creating meeting. Please try again.');
+            }
+        };
+
+        document.getElementById('hostControlToggle').onclick = () => {
+            const content = document.getElementById('hostControlContent');
+            const toggleBtn = document.getElementById('hostControlToggle');
+
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                toggleBtn.textContent = '📋 Hide Meeting Details';
+                toggleBtn.style.background = '#dc3545';
+            } else {
+                content.classList.add('hidden');
+                toggleBtn.textContent = '📋 Show Meeting Details';
+                toggleBtn.style.background = '#6c757d';
+            }
+        };
+
+        document.getElementById('joinNowBtn').onclick = () => {
+            if (createdMeetingCode && userName) {
+                joinRoom(createdMeetingCode, meetingScheduledTime, true, meetingTitle);
+            }
+        };
+
+        document.getElementById('copyDetailsBtn').onclick = () => {
+            copyMeetingDetails();
+        };
+
+        document.getElementById('joinBtn').onclick = async () => {
+            const roomCode = document.getElementById('room').value.trim();
+            userName = document.getElementById('userName').value.trim();
+
+            if (!roomCode || !userName) {
+                alert('Please enter your name and meeting code');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/meeting_info/${roomCode}`);
+                const meetingInfo = await response.json();
+
+                if (meetingInfo.error) {
+                    alert(meetingInfo.error);
+                    return;
+                }
+
+                if (meetingInfo.hasEnded) {
+                    document.getElementById('endedMeetingTitle').textContent = meetingInfo.title || 'Unknown Meeting';
+                    document.getElementById('meetingEndedMessage').classList.remove('hidden');
+                    document.getElementById('loginPanel').classList.add('hidden');
+                    return;
+                }
+
+                if (meetingInfo.title) {
+                    document.getElementById('waitingRoomMeetingTitle').textContent = meetingInfo.title;
+                }
+
+                if (loggedInUser && meetingInfo.hostId === loggedInUser.id) {
+                    selectedRole = 'host';
+                    currentMeetingInfo = meetingInfo;
+                    currentMeetingCode = roomCode;
+                    document.getElementById('hostPasswordTitle').textContent = 'Host Authentication Required';
+                    document.getElementById('hostPasswordDescription').textContent = 'Please enter the host password to join as host:';
+                    document.getElementById('hostPasswordError').classList.add('hidden');
+                    document.getElementById('hostPasswordInput').value = '';
+                    showModal('hostPasswordModal');
+                } else {
+                    showRoleSelection(roomCode, meetingInfo);
+                }
+            } catch (err) {
+                console.error('Error getting meeting info:', err);
+                isHost = false;
+                isCoHost = false;
+                joinRoom(roomCode);
+            }
+        };
+
+        // Recording controls
+        document.getElementById('recordBtn').onclick = () => {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        };
+
+        document.getElementById('exportParticipantsBtn').onclick = exportParticipants;
+        document.getElementById('viewRecordingsBtn').onclick = viewRecordings;
+
+        // Media controls
+        document.getElementById('muteBtn').addEventListener('click', () => {
+            if (mutedByHost) {
+                alert("You were muted by the host. Unmuting yourself now.");
+                mutedByHost = false;
+            }
+            muteLocalAudio(!isMuted, false);
+        });
+
+        document.getElementById('videoBtn').addEventListener('click', () => {
+            toggleLocalVideo();
+        });
+
+        document.getElementById('shareScreenBtn').onclick = async () => {
+            if (isSharing) {
+                stopScreenShare();
+                return;
+            }
+
+            try {
+                screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                document.getElementById('screenVideo').srcObject = screenStream;
+                document.getElementById('screenVideo').classList.remove('hidden');
+
+                Object.values(peers).forEach(pc => {
+                    screenStream.getTracks().forEach(track => {
+                        pc.addTrack(track, screenStream);
+                    });
+                });
+
+                ws.send(JSON.stringify({ type: 'screen', payload: { from: userName } }));
+
+                isSharing = true;
+                document.getElementById('shareScreenBtn').textContent = 'Stop Sharing';
+                document.getElementById('shareScreenBtn').style.background = '#d32f2f';
+
+                updateMainVideoArea();
+
+                screenStream.getTracks()[0].onended = stopScreenShare;
+            } catch (e) {
+                console.error('Screen share error:', e);
+                alert('Could not share screen. Please try again.');
+            }
+        };
+
+        function stopScreenShare() {
+            if (!isSharing) return;
+
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+                screenStream = null;
+            }
+
+            ws.send(JSON.stringify({ type: 'stopScreen' }));
+
+            document.getElementById('screenVideo').classList.add('hidden');
+            document.getElementById('screenVideo').srcObject = null;
+            document.getElementById('shareScreenBtn').textContent = 'Share Screen';
+            document.getElementById('shareScreenBtn').style.background = '#4caf50';
+
+            isSharing = false;
+            updateMainVideoArea();
+        }
+
+        // Chat controls
+        document.getElementById('chatToggleBtn').addEventListener('click', () => {
+            toggleChatPopup();
+        });
+
+        // Reactions controls
+        document.getElementById('reactionsBtn').addEventListener('click', () => {
+            toggleReactionsPopup();
+        });
+
+        document.getElementById('sendChat').onclick = () => {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            ws.send(JSON.stringify({ type: 'chat', payload: { from: userName, text: message } }));
+            appendMessage({ from: userName, text: message });
+            input.value = '';
+        };
+
+        document.getElementById('raiseHandBtn').onclick = () => {
+            const isCurrentlyRaised = participantHandRaised[myId];
+            const newState = !isCurrentlyRaised;
+
+            participantHandRaised[myId] = newState;
+
+            ws.send(JSON.stringify({
+                type: 'hand-raised',
+                payload: {
+                    from: userName,
+                    raised: newState,
+                    userId: myId
+                }
+            }));
+
+            const reaction = newState ? '✋ Raised Hand' : '✋ Lowered Hand';
+            ws.send(JSON.stringify({ type: 'reaction', payload: { from: userName, reaction: reaction } }));
+            appendMessage({ from: userName, reaction: reaction });
+
+            toggleReactionsPopup();
+        };
+
+        document.querySelectorAll('#reactionsPopup .emojiBtn:not(#raiseHandBtn)').forEach(btn => {
+            btn.onclick = () => {
+                const emoji = btn.textContent;
+                ws.send(JSON.stringify({ type: 'reaction', payload: { from: userName, reaction: emoji } }));
+                appendMessage({ from: userName, reaction: emoji });
+                toggleReactionsPopup();
+            };
+        });
+
+        // File upload
+        document.getElementById('uploadBtn').onclick = async () => {
+            const input = document.getElementById('fileInput');
+            const file = input.files[0];
+
+            if (!file) {
+                alert('Please select a file first');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                // Show loading state
+                const uploadBtn = document.getElementById('uploadBtn');
+                const originalText = uploadBtn.textContent;
+                uploadBtn.innerHTML = '<span class="loading"></span> Uploading...';
+                uploadBtn.disabled = true;
+
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                // Restore button
+                uploadBtn.textContent = originalText;
+                uploadBtn.disabled = false;
+
+                if (result.error) {
+                    alert('❌ Upload failed: ' + result.error);
+                    return;
+                }
+
+                ws.send(JSON.stringify({ type: 'chat', payload: { from: userName, file: result.url, filename: result.filename } }));
+                appendMessage({ from: userName, file: result.url, filename: result.filename });
+                input.value = '';
+                showSuccessNotification('✅ File uploaded successfully!');
+
+            } catch (err) {
+                // Restore button
+                const uploadBtn = document.getElementById('uploadBtn');
+                uploadBtn.textContent = 'Share File';
+                uploadBtn.disabled = false;
+                console.error('Upload error:', err);
+                alert('❌ Upload failed. Please try again.');
+            }
+        };
+
+        // Mute all (host only)
+        document.getElementById('muteAllBtn').onclick = () => {
+            if (isHost || isCoHost) {
+                ws.send(JSON.stringify({ type: 'mute-all', payload: {} }));
+                showSuccessNotification('🔇 Mute request sent to all participants.');
+            }
+        };
+
+        // Leave meeting
+        document.getElementById('leaveBtn').onclick = () => {
+            if (confirm('🚪 Are you sure you want to leave the meeting?')) {
+                if (localStream) {
+                    localStream.getTracks().forEach(track => track.stop());
+                }
+
+                if (screenStream) {
+                    screenStream.getTracks().forEach(track => track.stop());
+                }
+
+                Object.values(peers).forEach(pc => {
+                    try {
+                        pc.close();
+                    } catch (e) {}
+                });
+
+                peers = {};
+
+                if (ws) {
+                    ws.close();
+                }
+
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                }
+
+                if (recordingTimer) {
+                    clearInterval(recordingTimer);
+                }
+
+                // CLEAR MEETING TIMER
+                if (meetingTimerInterval) {
+                    clearInterval(meetingTimerInterval);
+                }
+
+                // DISABLE FULLSCREEN WHEN LEAVING
+                disableFullscreenMeeting();
+
+                location.reload();
+            }
+        };
+
+        // Initialize on page load
+        window.onload = () => {
+            checkExistingSession();
+            initializeTimeSelectors();
+            initializeChatDragging();
+            initializeFloatingPanelDragging();
+            initializeAudioControls();
+            initializePopupDragging(); // NEW: Initialize popup dragging
+
+            const params = new URLSearchParams(window.location.search);
+            const meetingCode = params.get('meeting');
+            if (meetingCode) {
+                document.getElementById('room').value = meetingCode;
+            }
+
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('meetingDate').value = today;
+
+            const now = new Date();
+            now.setHours(now.getHours() + 1);
+            const startTimeString = now.toTimeString().slice(0, 5);
+            document.getElementById('meetingStartTime').value = startTimeString;
+
+            now.setHours(now.getHours() + 1);
+            const endTimeString = now.toTimeString().slice(0, 5);
+            document.getElementById('meetingEndTime').value = endTimeString;
+
+            isChatOpen = false;
+            isReactionsOpen = false;
+            document.getElementById('chatPopup').style.display = 'none';
+            document.getElementById('reactionsPopup').style.display = 'none';
+
+            console.log('🎥 Agutech Mini Zoom Enhanced initialized with popup controls and responsive full-screen layout');
+        };
+    </script>
+</body>
+</html>
