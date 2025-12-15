@@ -513,5 +513,10 @@ app.add_routes([
 ])
 
 if __name__ == "__main__":
-    web.run_app(app, host="0.0.0.0", port=8080)
-    #web.run_app(app, host="0.0.0.0", port=8081)  # ← 5000, 8000, 8081, 8888, 9000… any of these
+    port = int(os.environ.get("PORT", 8080))
+    web.run_app(app, host="0.0.0.0", port=port)
+
+
+#if __name__ == "__main__":
+ #   web.run_app(app, host="0.0.0.0", port=8080)
+  #web.run_app(app, host="0.0.0.0", port=8081)  # ← 5000, 8000, 8081, 8888, 9000… any of these
