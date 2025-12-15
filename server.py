@@ -21,6 +21,7 @@ os.makedirs(RECORDING_DIR, exist_ok=True)
 # --- DATABASE SETUP ---
 DB_FILE = "database.db"
 
+
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
@@ -62,15 +63,18 @@ def init_db():
     conn.commit()
     conn.close()
 
+
 init_db()
 
 # --- GLOBAL VARIABLES ---
 rooms = {}  # active WebSocket rooms
 registered_rooms = {}  # meetings created (code → info)
 
+
 # --- HELPERS ---
 def hash_password(pw):
     return hashlib.sha256(pw.encode()).hexdigest()
+
 
 def get_user_by_email(email):
     conn = sqlite3.connect(DB_FILE)
@@ -80,6 +84,7 @@ def get_user_by_email(email):
     conn.close()
     return row  # (id, full_name, password_hash) or None
 
+
 def get_user_by_token(token):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
@@ -87,6 +92,7 @@ def get_user_by_token(token):
     row = c.fetchone()
     conn.close()
     return row  # (id, full_name) or None
+
 
 def get_meeting_by_code(code):
     conn = sqlite3.connect(DB_FILE)
@@ -96,17 +102,22 @@ def get_meeting_by_code(code):
     conn.close()
     return row  # (id, start_time, title, end_time, host_id, host_password_hash) or None
 
+
 def get_user_meetings(user_id):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("""SELECT code, title, start_time, end_time, created_at FROM meetings WHERE host_id=? ORDER BY created_at DESC""", (user_id,))
+    c.execute(
+        """SELECT code, title, start_time, end_time, created_at FROM meetings WHERE host_id=? ORDER BY created_at DESC""",
+        (user_id,))
     rows = c.fetchall()
     conn.close()
     return rows
 
+
 # --- ROUTES ---
 async def index(request):
     return web.FileResponse(os.path.join(STATIC_DIR, "index.html"))
+
 
 async def signup_handler(request):
     data = await request.json()
@@ -125,6 +136,7 @@ async def signup_handler(request):
     conn.close()
     return web.json_response({"success": True, "message": "Account created!"})
 
+
 async def login_handler(request):
     data = await request.json()
     email = data.get('email', '').strip().lower()
@@ -140,6 +152,7 @@ async def login_handler(request):
     conn.close()
     return web.json_response({"success": True, "token": token, "name": user[1], "user_id": user[0]})
 
+
 async def forgot_password_handler(request):
     data = await request.json()
     email = data.get('email', '').strip().lower()
@@ -154,6 +167,7 @@ async def forgot_password_handler(request):
     conn.commit()
     conn.close()
     return web.json_response({"success": True, "reset_token": token})
+
 
 async def reset_password_handler(request):
     data = await request.json()
@@ -171,6 +185,7 @@ async def reset_password_handler(request):
     conn.commit()
     conn.close()
     return web.json_response({"success": True, "message": "Password reset successful!"})
+
 
 async def create_meeting(request):
     auth_header = request.headers.get('Authorization', '')
@@ -234,6 +249,7 @@ async def create_meeting(request):
         "endTime": end_time.isoformat()
     })
 
+
 async def get_user_meetings_handler(request):
     auth_header = request.headers.get('Authorization', '')
     if not auth_header.startswith('Bearer '):
@@ -246,8 +262,10 @@ async def get_user_meetings_handler(request):
     meeting_list = []
     for meeting in meetings:
         code, title, start_time_str, end_time_str, created_at = meeting
-        start_time = datetime.fromisoformat(start_time_str.replace('Z', '+00:00')) if isinstance(start_time_str, str) else start_time_str
-        end_time = datetime.fromisoformat(end_time_str.replace('Z', '+00:00')) if isinstance(end_time_str, str) and end_time_str else end_time_str
+        start_time = datetime.fromisoformat(start_time_str.replace('Z', '+00:00')) if isinstance(start_time_str,
+                                                                                                 str) else start_time_str
+        end_time = datetime.fromisoformat(end_time_str.replace('Z', '+00:00')) if isinstance(end_time_str,
+                                                                                             str) and end_time_str else end_time_str
         meeting_list.append({
             "code": code,
             "title": title,
@@ -258,6 +276,7 @@ async def get_user_meetings_handler(request):
         })
     return web.json_response({"meetings": meeting_list})
 
+
 async def meeting_info(request):
     code = request.match_info['code']
     meeting = get_meeting_by_code(code)
@@ -265,8 +284,10 @@ async def meeting_info(request):
         return web.json_response({"error": "Meeting not found"}, status=404)
 
     meeting_id, start_time_str, title, end_time_str, host_id, password_hash = meeting
-    start_time = datetime.fromisoformat(start_time_str.replace('Z', '+00:00')) if isinstance(start_time_str, str) else start_time_str
-    end_time = datetime.fromisoformat(end_time_str.replace('Z', '+00:00')) if isinstance(end_time_str, str) and end_time_str else end_time_str
+    start_time = datetime.fromisoformat(start_time_str.replace('Z', '+00:00')) if isinstance(start_time_str,
+                                                                                             str) else start_time_str
+    end_time = datetime.fromisoformat(end_time_str.replace('Z', '+00:00')) if isinstance(end_time_str,
+                                                                                         str) and end_time_str else end_time_str
     now = datetime.now()
     has_ended = end_time and now > end_time
 
@@ -279,6 +300,7 @@ async def meeting_info(request):
         "requiresHostPassword": bool(password_hash)  # Always True since required
     })
 
+
 async def list_recordings(request):
     code = request.query.get('code')
     if not code:
@@ -288,11 +310,13 @@ async def list_recordings(request):
         return web.json_response({"error": "Meeting not found"}, status=404)
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("SELECT filename, uploaded_at FROM recordings WHERE meeting_id = ? ORDER BY uploaded_at DESC", (meeting[0],))
+    c.execute("SELECT filename, uploaded_at FROM recordings WHERE meeting_id = ? ORDER BY uploaded_at DESC",
+              (meeting[0],))
     rows = c.fetchall()
     conn.close()
     recordings = [{"filename": r[0], "uploaded_at": str(r[1])[:19].replace("T", " ")} for r in rows]
     return web.json_response({"recordings": recordings})
+
 
 async def upload_handler(request):
     reader = await request.multipart()
@@ -312,6 +336,7 @@ async def upload_handler(request):
             await f.write(chunk)
     file_url = f"/uploads/{saved_name}"
     return web.json_response({'url': file_url, 'filename': original_filename})
+
 
 async def upload_recording(request):
     data = await request.json()
@@ -335,6 +360,7 @@ async def upload_recording(request):
     except Exception as e:
         return web.json_response({"error": f"Failed to save recording: {str(e)}"}, status=500)
 
+
 async def export_participants(request):
     code = request.query.get('code')
     if not code:
@@ -343,11 +369,15 @@ async def export_participants(request):
     if not meeting:
         return web.json_response({"error": "Meeting not found"}, status=404)
     conn = sqlite3.connect(DB_FILE)
-    df = pd.read_sql_query("""SELECT p.name, p.join_time, p.role FROM participants p JOIN meetings m ON p.meeting_id = m.id WHERE m.code = ?""", conn, params=(code,))
+    df = pd.read_sql_query(
+        """SELECT p.name, p.join_time, p.role FROM participants p JOIN meetings m ON p.meeting_id = m.id WHERE m.code = ?""",
+        conn, params=(code,))
     conn.close()
     excel_path = f"participants_{code}.xlsx"
     df.to_excel(excel_path, index=False)
-    return web.FileResponse(excel_path, headers={"Content-Disposition": f"attachment; filename=participants_{code}.xlsx"})
+    return web.FileResponse(excel_path,
+                            headers={"Content-Disposition": f"attachment; filename=participants_{code}.xlsx"})
+
 
 async def download_recording(request):
     filename = request.query.get('file')
@@ -357,6 +387,7 @@ async def download_recording(request):
     if not os.path.exists(path):
         return web.json_response({"error": "File not found"}, status=404)
     return web.FileResponse(path, headers={"Content-Disposition": f"attachment; filename={filename}"})
+
 
 # --- WEBSOCKET ---
 async def websocket_handler(request):
@@ -371,8 +402,10 @@ async def websocket_handler(request):
         return ws
 
     meeting_id, start_time_str, title, end_time_str, host_id, password_hash = meeting
-    start_time = datetime.fromisoformat(start_time_str.replace('Z', '+00:00')) if isinstance(start_time_str, str) else start_time_str
-    end_time = datetime.fromisoformat(end_time_str.replace('Z', '+00:00')) if isinstance(end_time_str, str) and end_time_str else end_time_str
+    start_time = datetime.fromisoformat(start_time_str.replace('Z', '+00:00')) if isinstance(start_time_str,
+                                                                                             str) else start_time_str
+    end_time = datetime.fromisoformat(end_time_str.replace('Z', '+00:00')) if isinstance(end_time_str,
+                                                                                         str) and end_time_str else end_time_str
     now = datetime.now()
 
     # Check if meeting has ended
@@ -414,13 +447,16 @@ async def websocket_handler(request):
                     is_valid_host = False
                     if role in ["host", "cohost"]:
                         if not password_hash:
-                            await ws.send_json({"type": "error", "payload": {"message": "Host password required", "code": "PASSWORD_REQUIRED"}})
+                            await ws.send_json({"type": "error", "payload": {"message": "Host password required",
+                                                                             "code": "PASSWORD_REQUIRED"}})
                             return ws
                         if not provided_password:
-                            await ws.send_json({"type": "error", "payload": {"message": "Host password required", "code": "PASSWORD_REQUIRED"}})
+                            await ws.send_json({"type": "error", "payload": {"message": "Host password required",
+                                                                             "code": "PASSWORD_REQUIRED"}})
                             return ws
                         if hash_password(provided_password) != password_hash:
-                            await ws.send_json({"type": "error", "payload": {"message": "Invalid host password", "code": "INVALID_PASSWORD"}})
+                            await ws.send_json({"type": "error", "payload": {"message": "Invalid host password",
+                                                                             "code": "INVALID_PASSWORD"}})
                             return ws
                         is_valid_host = True
 
@@ -445,6 +481,41 @@ async def websocket_handler(request):
                     await broadcast_user_list(room)
                     await broadcast_participant_count(room)
 
+                # === FIXED: ADD CHAT MESSAGE HANDLING ===
+                elif msg_type == "chat-message":
+                    sender_name = rooms[room]['users'].get(ws_id, {}).get('name', 'Unknown')
+                    sender_role = rooms[room]['users'].get(ws_id, {}).get('role', 'participant')
+
+                    # Broadcast chat message to all participants
+                    chat_payload = {
+                        "message": payload.get("message", ""),
+                        "sender": sender_name,
+                        "role": sender_role,
+                        "timestamp": datetime.now().isoformat(),
+                        "senderId": ws_id
+                    }
+
+                    for peer in rooms[room]['websockets']:
+                        await peer.send_json({"type": "chat-message", "payload": chat_payload})
+
+                # === FIXED: ADD FILE SHARE HANDLING ===
+                elif msg_type == "file-share":
+                    sender_name = rooms[room]['users'].get(ws_id, {}).get('name', 'Unknown')
+                    sender_role = rooms[room]['users'].get(ws_id, {}).get('role', 'participant')
+
+                    # Broadcast file share to all participants
+                    file_payload = {
+                        "fileUrl": payload.get("fileUrl", ""),
+                        "fileName": payload.get("fileName", ""),
+                        "sender": sender_name,
+                        "role": sender_role,
+                        "timestamp": datetime.now().isoformat(),
+                        "senderId": ws_id
+                    }
+
+                    for peer in rooms[room]['websockets']:
+                        await peer.send_json({"type": "file-share", "payload": file_payload})
+
                 elif msg_type in ["offer", "answer", "ice-candidate"]:
                     target = payload.get("target")
                     if target:
@@ -461,7 +532,9 @@ async def websocket_handler(request):
                                 await pws.send_json({"type": "mute-request", "payload": {}})
                                 break
 
+                # === FIXED: BROADCAST ALL OTHER MESSAGE TYPES ===
                 else:
+                    # Broadcast all other message types (screen-share, reactions, etc.) to all participants
                     for peer in rooms[room]['websockets']:
                         if peer != ws:
                             await peer.send_json({"type": msg_type, "payload": payload})
@@ -479,16 +552,20 @@ async def websocket_handler(request):
 
     return ws
 
+
 async def broadcast_user_list(room):
-    users = [{"id": uid, "name": user_data['name'], "role": user_data['role']} for uid, user_data in rooms[room]['users'].items()]
+    users = [{"id": uid, "name": user_data['name'], "role": user_data['role']} for uid, user_data in
+             rooms[room]['users'].items()]
     host_id = rooms[room]['host']
     for ws in rooms[room]['websockets']:
         await ws.send_json({"type": "user-list", "payload": {"users": users, "host": host_id}})
+
 
 async def broadcast_participant_count(room):
     count = len(rooms[room]['websockets'])
     for ws in rooms[room]['websockets']:
         await ws.send_json({"type": "participants", "payload": {"count": count}})
+
 
 # --- APP SETUP ---
 app = web.Application()
@@ -515,8 +592,3 @@ app.add_routes([
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     web.run_app(app, host="0.0.0.0", port=port)
-
-
-#if __name__ == "__main__":
- #   web.run_app(app, host="0.0.0.0", port=8080)
-  #web.run_app(app, host="0.0.0.0", port=8081)  # ← 5000, 8000, 8081, 8888, 9000… any of these

@@ -1838,6 +1838,10 @@ button:hover {
         let peers = {}, unreadCount = 0;
         let isMuted = false, isVideoOff = false, isChatOpen = false, isReactionsOpen = false;
         let mutedByHost = false;
+        let currentUser = null;
+        let meetingCode = null;
+        let participantCount = 0;
+        let allParticipants = new Map(); // Track all participants including their video states
         let meetingScheduledTime = null;
         let countdownInterval = null;
         let createdMeetingCode = null;
@@ -1904,6 +1908,563 @@ button:hover {
         let meetingTimerInterval = null;
         let fiveMinuteWarningShown = false;
         let oneMinuteWarningShown = false;
+
+
+        // Initialize the application
+document.addEventListener('DOMContentLoaded', function() {
+    initializeApp();
+});
+
+function initializeApp() {
+    const urlParams = new URLSearchParams(window.location.search);
+    meetingCode = urlParams.get('meeting');
+
+    if (meetingCode) {
+        fetchMeetingInfo(meetingCode);
+    } else {
+        showWelcomeScreen();
+    }
+
+    setupEventListeners();
+}
+
+
+
+function setupEventListeners() {
+    // Chat functionality
+    const chatInput = document.getElementById('chatInput');
+    const sendChatBtn = document.getElementById('sendChatBtn');
+
+    if (chatInput && sendChatBtn) {
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendChatMessage();
+            }
+        });
+
+        sendChatBtn.addEventListener('click', sendChatMessage);
+    }
+
+    // File sharing functionality
+    const fileShareBtn = document.getElementById('fileShareBtn');
+    if (fileShareBtn) {
+        fileShareBtn.addEventListener('click', function() {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '*/*';
+            fileInput.onchange = function(e) {
+                if (e.target.files.length > 0) {
+                    uploadAndShareFile(e.target.files[0]);
+                }
+            };
+            fileInput.click();
+        });
+    }
+}
+
+// Fixed WebSocket connection and message handling
+function connectWebSocket(room, username, role = 'participant', hostPassword = '') {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/${room}`;
+
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = function() {
+        console.log('WebSocket connected');
+
+        // Send join message with proper role and authentication
+        const joinMessage = {
+            type: 'join',
+            payload: {
+                username: username,
+                role: role,
+                hostId: currentUser?.user_id,
+                host_password: hostPassword
+            }
+        };
+
+        ws.send(JSON.stringify(joinMessage));
+    };
+
+    ws.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        handleWebSocketMessage(data);
+    };
+
+    ws.onclose = function() {
+        console.log('WebSocket disconnected');
+        // Attempt to reconnect after 3 seconds
+        setTimeout(() => {
+            if (meetingCode && currentUser) {
+                connectWebSocket(meetingCode, currentUser.name, isHost ? 'host' : (isCohost ? 'cohost' : 'participant'));
+            }
+        }, 3000);
+    };
+
+    ws.onerror = function(error) {
+        console.error('WebSocket error:', error);
+    };
+}
+
+// Fixed WebSocket message handling
+function handleWebSocketMessage(data) {
+    const { type, payload } = data;
+
+    switch (type) {
+        case 'user-list':
+            updateParticipantsList(payload.users);
+            updateParticipantGrid(payload.users);
+            break;
+
+        case 'participants':
+            participantCount = payload.count;
+            updateParticipantCount(payload.count);
+            break;
+
+        case 'chat-message':
+            displayChatMessage(payload);
+            break;
+
+        case 'file-share':
+            displaySharedFile(payload);
+            break;
+
+        case 'offer':
+            handleOffer(payload);
+            break;
+
+        case 'answer':
+            handleAnswer(payload);
+            break;
+
+        case 'ice-candidate':
+            handleIceCandidate(payload);
+            break;
+
+        case 'screen-share':
+            handleScreenShare(payload);
+            break;
+
+        case 'mute-request':
+            handleMuteRequest();
+            break;
+
+        case 'error':
+            handleWebSocketError(payload);
+            break;
+
+        default:
+            console.log('Unhandled message type:', type, payload);
+    }
+}
+
+// Fixed chat message sending
+function sendChatMessage() {
+    const chatInput = document.getElementById('chatInput');
+    const message = chatInput.value.trim();
+
+    if (message && ws && ws.readyState === WebSocket.OPEN) {
+        const chatMessage = {
+            type: 'chat-message',
+            payload: {
+                message: message
+            }
+        };
+
+        ws.send(JSON.stringify(chatMessage));
+        chatInput.value = '';
+    }
+}
+
+// Fixed chat message display
+function displayChatMessage(payload) {
+    const chatMessages = document.getElementById('chatMessages');
+    if (!chatMessages) return;
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'chat-message';
+
+    const timestamp = new Date(payload.timestamp).toLocaleTimeString();
+    const senderRole = payload.role === 'host' ? '👑' : (payload.role === 'cohost' ? '🤝' : '👤');
+
+    messageDiv.innerHTML = `
+        <div class="message-header">
+            <span class="sender">${senderRole} ${payload.sender}</span>
+            <span class="timestamp">${timestamp}</span>
+        </div>
+        <div class="message-content">${escapeHtml(payload.message)}</div>
+    `;
+
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Fixed file sharing
+function uploadAndShareFile(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    fetch('/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.url) {
+            // Send file share message via WebSocket
+            const fileShareMessage = {
+                type: 'file-share',
+                payload: {
+                    fileUrl: data.url,
+                    fileName: data.filename
+                }
+            };
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(fileShareMessage));
+            }
+        }
+    })
+    .catch(error => {
+        console.error('File upload error:', error);
+        alert('Failed to upload file');
+    });
+}
+
+// Fixed file display
+function displaySharedFile(payload) {
+    const chatMessages = document.getElementById('chatMessages');
+    if (!chatMessages) return;
+
+    const fileDiv = document.createElement('div');
+    fileDiv.className = 'shared-file';
+
+    const timestamp = new Date(payload.timestamp).toLocaleTimeString();
+    const senderRole = payload.role === 'host' ? '👑' : (payload.role === 'cohost' ? '🤝' : '👤');
+
+    fileDiv.innerHTML = `
+        <div class="message-header">
+            <span class="sender">${senderRole} ${payload.sender}</span>
+            <span class="timestamp">${timestamp}</span>
+        </div>
+        <div class="file-content">
+            <div class="file-info">
+                <span class="file-icon">📎</span>
+                <span class="file-name">${escapeHtml(payload.fileName)}</span>
+            </div>
+            <a href="${payload.fileUrl}" target="_blank" class="download-btn">📥 Download</a>
+        </div>
+    `;
+
+    chatMessages.appendChild(fileDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Fixed participant grid management
+function updateParticipantGrid(users) {
+    const videoGrid = document.getElementById('videoGrid');
+    if (!videoGrid) return;
+
+    // Clear existing grid but preserve local video
+    const existingVideos = videoGrid.querySelectorAll('.video-container:not(.local-video)');
+    existingVideos.forEach(video => video.remove());
+
+    // Update participant tracking
+    allParticipants.clear();
+    users.forEach(user => {
+        allParticipants.set(user.id, {
+            name: user.name,
+            role: user.role,
+            hasVideo: true // Assume video is available
+        });
+    });
+
+    // Create video containers for all participants
+    users.forEach(user => {
+        if (user.id !== getCurrentUserId()) {
+            createVideoContainer(user);
+        }
+    });
+
+    // Update grid layout
+    updateGridLayout();
+
+    // Update participant count display
+    updateParticipantCount(users.length);
+}
+
+function createVideoContainer(user) {
+    const videoGrid = document.getElementById('videoGrid');
+    if (!videoGrid) return;
+
+    const videoContainer = document.createElement('div');
+    videoContainer.className = 'video-container remote-video';
+    videoContainer.id = `video-${user.id}`;
+
+    const roleIcon = user.role === 'host' ? '👑' : (user.role === 'cohost' ? '🤝' : '👤');
+
+    videoContainer.innerHTML = `
+        <video autoplay playsinline></video>
+        <div class="video-overlay">
+            <span class="participant-name">${roleIcon} ${escapeHtml(user.name)}</span>
+            <div class="video-controls">
+                <button class="mute-btn" onclick="toggleParticipantMute('${user.id}')">🔇</button>
+            </div>
+        </div>
+    `;
+
+    videoGrid.appendChild(videoContainer);
+}
+
+// Fixed grid layout calculation
+function updateGridLayout() {
+    const videoGrid = document.getElementById('videoGrid');
+    if (!videoGrid) return;
+
+    const videos = videoGrid.querySelectorAll('.video-container');
+    const count = videos.length;
+
+    if (count === 0) return;
+
+    // Calculate optimal grid layout
+    let cols, rows;
+    if (count === 1) {
+        cols = 1; rows = 1;
+    } else if (count === 2) {
+        cols = 2; rows = 1;
+    } else if (count <= 4) {
+        cols = 2; rows = 2;
+    } else if (count <= 6) {
+        cols = 3; rows = 2;
+    } else if (count <= 9) {
+        cols = 3; rows = 3;
+    } else {
+        cols = 4; rows = Math.ceil(count / 4);
+    }
+
+    // Apply grid layout
+    videoGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    videoGrid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+
+    // Ensure all videos are visible
+    videos.forEach((video, index) => {
+        video.style.display = 'block';
+        video.style.gridColumn = '';
+        video.style.gridRow = '';
+    });
+}
+
+// Fixed participant count update
+function updateParticipantCount(count) {
+    participantCount = count;
+
+    // Update all participant count displays
+    const countElements = document.querySelectorAll('.participant-count, [data-participant-count]');
+    countElements.forEach(element => {
+        element.textContent = count;
+    });
+
+    // Update button text that includes participant count
+    const participantBtn = document.querySelector('[onclick="toggleParticipants()"]');
+    if (participantBtn) {
+        participantBtn.innerHTML = `👥 Participants (${count})`;
+    }
+}
+
+// Fixed participants list update
+function updateParticipantsList(users) {
+    const participantsList = document.getElementById('participantsList');
+    if (!participantsList) return;
+
+    participantsList.innerHTML = '';
+
+    users.forEach(user => {
+        const participantDiv = document.createElement('div');
+        participantDiv.className = 'participant-item';
+
+        const roleIcon = user.role === 'host' ? '👑' : (user.role === 'cohost' ? '🤝' : '👤');
+        const roleText = user.role === 'host' ? 'Host' : (user.role === 'cohost' ? 'Co-Host' : 'Participant');
+
+        participantDiv.innerHTML = `
+            <div class="participant-info">
+                <span class="participant-icon">${roleIcon}</span>
+                <span class="participant-name">${escapeHtml(user.name)}</span>
+                <span class="participant-role">${roleText}</span>
+            </div>
+            ${(isHost || isCohost) && user.role === 'participant' ?
+                `<button class="mute-participant-btn" onclick="muteParticipant('${user.id}')">🔇</button>` :
+                ''
+            }
+        `;
+
+        participantsList.appendChild(participantDiv);
+    });
+}
+
+// Utility functions
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function getCurrentUserId() {
+    // Return current user's WebSocket ID or user ID
+    return currentUser?.ws_id || currentUser?.user_id || 'local';
+}
+
+function handleWebSocketError(payload) {
+    console.error('WebSocket error:', payload);
+    if (payload.code === 'PASSWORD_REQUIRED' || payload.code === 'INVALID_PASSWORD') {
+        alert('Invalid host password. Please try again.');
+        // Redirect back to role selection
+        showRoleSelection();
+    }
+}
+
+// Screen sharing fix
+function handleScreenShare(payload) {
+    // Handle screen sharing without affecting participant grid
+    const screenShareContainer = document.getElementById('screenShareContainer');
+    if (screenShareContainer) {
+        if (payload.action === 'start') {
+            screenShareContainer.style.display = 'block';
+            // Don't modify the participant grid
+        } else if (payload.action === 'stop') {
+            screenShareContainer.style.display = 'none';
+        }
+    }
+}
+
+// Mute request handling
+function handleMuteRequest() {
+    if (localStream) {
+        const audioTrack = localStream.getAudioTracks()[0];
+        if (audioTrack) {
+            audioTrack.enabled = false;
+            updateMuteButton(true);
+        }
+    }
+}
+
+function updateMuteButton(isMuted) {
+    const muteBtn = document.getElementById('muteBtn');
+    if (muteBtn) {
+        muteBtn.innerHTML = isMuted ? '🔇 Unmute' : '🎤 Mute';
+        muteBtn.classList.toggle('muted', isMuted);
+    }
+}
+
+// Additional CSS for proper styling (add to your CSS)
+const additionalCSS = `
+.chat-message, .shared-file {
+    margin-bottom: 10px;
+    padding: 8px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.message-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    font-size: 0.8em;
+    opacity: 0.8;
+}
+
+.sender {
+    font-weight: bold;
+}
+
+.timestamp {
+    font-size: 0.7em;
+}
+
+.message-content {
+    word-wrap: break-word;
+}
+
+.file-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.download-btn {
+    padding: 4px 8px;
+    background: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 0.8em;
+}
+
+.download-btn:hover {
+    background: #0056b3;
+}
+
+.video-container {
+    position: relative;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.video-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.video-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.7));
+    padding: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.participant-name {
+    color: white;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.participant-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.participant-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.participant-role {
+    font-size: 0.8em;
+    opacity: 0.7;
+}
+`;
+
+// Add the CSS to the document
+const style = document.createElement('style');
+style.textContent = additionalCSS;
+document.head.appendChild(style);
 
         // NEW: Toggle functions for popups
         function toggleAudioSettings() {
@@ -4401,7 +4962,7 @@ button:hover {
             isChatOpen = false;
             isReactionsOpen = false;
             document.getElementById('chatPopup').style.display = 'none';
-            document.getElementById('reactionsPopup').style.display = 'none';
+            document.getElemenAtById('reactionsPopup').style.display = 'none';
 
             console.log('🎥 Agutech Mini Zoom Enhanced initialized with popup controls and responsive full-screen layout');
         };
