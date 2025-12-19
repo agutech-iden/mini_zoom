@@ -1,0 +1,15 @@
+# Virtual environment
+.venv/
+
+# Database
+database.db
+
+# Windows system files
+desktop.ini
+
+# IDE files
+.idea/
+
+# Runtime folders
+uploads/
+recordings/
