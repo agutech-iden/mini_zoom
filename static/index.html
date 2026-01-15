@@ -2103,9 +2103,7 @@ let oneMinuteWarningShown = false;
 let isScreenSharing = false;
 let screenSharingUserId = null;
 
-// Initialize the application
-
-    // === NETWORK STATUS FUNCTION (ADD THIS SOMEWHERE EARLIER, AROUND LINE 200-300) ===
+// ========== NETWORK STATUS FUNCTION ==========
 function checkNetworkStatus() {
     console.log("=== Network Status ===");
     console.log("Current time:", new Date().toISOString());
@@ -2124,8 +2122,57 @@ function checkNetworkStatus() {
 
 // Make it globally accessible from browser console
 window.checkNetwork = checkNetworkStatus;
-// === END FUNCTION ===
+
+// ========== WEBRTC DEBUG FUNCTION ==========
+function logWebRTCStats() {
+    console.log("=== WebRTC Debug Info ===");
+    console.log("Local Stream:", localStream ? "Available" : "Not available");
+    console.log("Screen Stream:", screenStream ? "Available" : "Not available");
+    console.log("Is Sharing Screen:", isSharing);
+    console.log("Is Screen Sharing Active:", isScreenSharing);
+    console.log("Screen Sharing User:", screenSharingUserId);
+    console.log("Number of Peer Connections:", Object.keys(peers).length);
     
+    if (localStream) {
+        const tracks = localStream.getTracks();
+        console.log("Local Tracks:", tracks.map(t => `${t.kind}:${t.enabled ? 'enabled' : 'disabled'}`));
+    }
+    
+    if (screenStream) {
+        const screenTracks = screenStream.getTracks();
+        console.log("Screen Tracks:", screenTracks.map(t => `${t.kind}:${t.enabled ? 'enabled' : 'disabled'}`));
+    }
+    
+    Object.keys(peers).forEach(peerId => {
+        const pc = peers[peerId];
+        console.log(`Peer ${peerId}:`);
+        console.log(`  - Connection State: ${pc.connectionState}`);
+        console.log(`  - ICE State: ${pc.iceConnectionState}`);
+        console.log(`  - Signaling State: ${pc.signalingState}`);
+        
+        const senders = pc.getSenders();
+        console.log(`  - Senders: ${senders.length}`);
+        senders.forEach((sender, i) => {
+            if (sender.track) {
+                console.log(`    Sender ${i}: ${sender.track.kind} - ${sender.track.readyState}`);
+            }
+        });
+        
+        const receivers = pc.getReceivers();
+        console.log(`  - Receivers: ${receivers.length}`);
+        receivers.forEach((receiver, i) => {
+            if (receiver.track) {
+                console.log(`    Receiver ${i}: ${receiver.track.kind} - ${receiver.track.readyState}`);
+            }
+        });
+    });
+    console.log("=== End Debug Info ===");
+}
+
+// Make it globally accessible from browser console
+window.debugWebRTC = logWebRTCStats;
+
+// ========== INITIALIZATION ==========
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
 });
@@ -2196,7 +2243,7 @@ function setupEventListeners() {
     }
 }
 
-// FIXED: WebSocket connection and message handling
+// ========== WEBSOCKET CONNECTION ==========
 function connectWebSocket(room, username, role = 'participant', hostPassword = '') {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/${room}`;
@@ -2256,7 +2303,7 @@ function connectWebSocket(room, username, role = 'participant', hostPassword = '
     };
 }
 
-// FIXED: WebSocket message handling with proper screen sharing support
+// ========== WEBSOCKET MESSAGE HANDLING ==========
 function handleWebSocketMessage(data) {
     const { type, payload } = data;
 
@@ -2300,10 +2347,6 @@ function handleWebSocketMessage(data) {
             handleScreenShareStop(payload);
             break;
 
-        case 'screen-share-stream':
-            handleScreenShareStream(payload);
-            break;
-
         case 'mute-request':
             handleMuteRequest();
             break;
@@ -2317,7 +2360,7 @@ function handleWebSocketMessage(data) {
     }
 }
 
-// FIXED: Screen sharing handlers
+// ========== SCREEN SHARING HANDLERS ==========
 function handleScreenShareStart(payload) {
     console.log('Screen sharing started by:', payload.from);
     isScreenSharing = true;
@@ -2332,14 +2375,6 @@ function handleScreenShareStart(payload) {
             from: 'System',
             text: `🖥️ ${payload.from} started screen sharing`
         });
-        
-        // IMPORTANT: Request renegotiation for screen stream
-        if (Object.keys(peers).length > 0) {
-            Object.keys(peers).forEach(peerId => {
-                // Trigger renegotiation to get screen stream
-                makeOffer(peerId);
-            });
-        }
     }
 }
 
@@ -2360,16 +2395,7 @@ function handleScreenShareStop(payload) {
     }
 }
 
-function handleScreenShareStream(payload) {
-    // Handle incoming screen share stream
-    const screenVideo = document.getElementById('screenVideo');
-    if (payload.stream && screenVideo) {
-        // This would be handled by WebRTC peer connections
-        console.log('Received screen share stream from:', payload.from);
-    }
-}
-
-// FIXED: Chat message sending
+// ========== CHAT FUNCTIONS ==========
 function sendChatMessage() {
     const chatInput = document.getElementById('chatInput');
     const message = chatInput.value.trim();
@@ -2386,7 +2412,6 @@ function sendChatMessage() {
     }
 }
 
-// FIXED: Chat message display
 function displayChatMessage(payload) {
     const messages = document.getElementById('messages');
     if (!messages) return;
@@ -2409,7 +2434,7 @@ function displayChatMessage(payload) {
     messages.scrollTop = messages.scrollHeight;
 }
 
-// FIXED: File sharing
+// ========== FILE SHARING ==========
 function uploadAndShareFile(file) {
     const formData = new FormData();
     formData.append('file', file);
@@ -2441,7 +2466,6 @@ function uploadAndShareFile(file) {
     });
 }
 
-// FIXED: File display
 function displaySharedFile(payload) {
     const messages = document.getElementById('messages');
     if (!messages) return;
@@ -2470,7 +2494,7 @@ function displaySharedFile(payload) {
     messages.scrollTop = messages.scrollHeight;
 }
 
-// FIXED: Main video area update with proper screen sharing support
+// ========== VIDEO MANAGEMENT ==========
 function updateMainVideoArea() {
     const participantGrid = document.getElementById('participantGrid');
     const screenVideo = document.getElementById('screenVideo');
@@ -2491,7 +2515,6 @@ function updateMainVideoArea() {
     }
 }
 
-// FIXED: Participant grid management
 function updateParticipantGrid() {
     const participantGrid = document.getElementById('participantGrid');
     if (!participantGrid) return;
@@ -2546,7 +2569,6 @@ function updateParticipantGrid() {
     });
 }
 
-// Update floating participants during screen sharing
 function updateFloatingParticipants() {
     const floatingContainer = document.getElementById('floatingParticipantsContainer');
     floatingContainer.innerHTML = '';
@@ -2596,7 +2618,7 @@ function updateFloatingParticipants() {
     });
 }
 
-// FIXED: Participant count update
+// ========== PARTICIPANT MANAGEMENT ==========
 function updateParticipantCount(count) {
     participantCount = count;
 
@@ -2607,7 +2629,6 @@ function updateParticipantCount(count) {
     });
 }
 
-// FIXED: Participants list update
 function updateParticipantsList(users) {
     const participantList = document.getElementById('participantList');
     if (!participantList) return;
@@ -2636,7 +2657,7 @@ function updateParticipantsList(users) {
     participantList.innerHTML = participantContent;
 }
 
-// Utility functions
+// ========== UTILITY FUNCTIONS ==========
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
@@ -2655,26 +2676,7 @@ function handleWebSocketError(payload) {
     }
 }
 
-// Mute request handling
-function handleMuteRequest() {
-    if (localStream) {
-        const audioTrack = localStream.getAudioTracks()[0];
-        if (audioTrack) {
-            audioTrack.enabled = false;
-            updateMuteButton(true);
-        }
-    }
-}
-
-function updateMuteButton(isMuted) {
-    const muteBtn = document.getElementById('muteBtn');
-    if (muteBtn) {
-        muteBtn.innerHTML = isMuted ? '🔇 Unmute' : '🎤 Mute';
-        muteBtn.classList.toggle('muted', isMuted);
-    }
-}
-
-// NEW: Toggle functions for popups
+// ========== POPUP TOGGLE FUNCTIONS ==========
 function toggleAudioSettings() {
     const audioPopup = document.getElementById('audioSettingsPopup');
     const isVisible = audioPopup.style.display === 'flex';
@@ -2687,6 +2689,12 @@ function toggleAudioSettings() {
         audioPopup.style.display = 'flex';
         document.getElementById('audioSettingsBtn').textContent = '🎧 Hide Audio';
         isAudioSettingsOpen = true;
+        
+        // Initialize audio controls if not already done
+        if (!audioPopup.hasAttribute('data-initialized')) {
+            initializeAudioControls();
+            audioPopup.setAttribute('data-initialized', 'true');
+        }
     }
 }
 
@@ -2720,236 +2728,38 @@ function toggleParticipants() {
     }
 }
 
-// NEW: Initialize dragging for all popups
-function initializePopupDragging() {
-    // Audio Settings Dragging
-    const audioPopup = document.getElementById('audioSettingsPopup');
-    const audioHeader = document.getElementById('audioHeader');
+// ========== AUDIO CONTROLS ==========
+function initializeAudioControls() {
+    const micVolumeSlider = document.getElementById('micVolumeSlider');
+    const micVolumeValue = document.getElementById('micVolumeValue');
 
-    audioHeader.addEventListener('mousedown', (e) => {
-        isDraggingAudio = true;
-        const rect = audioPopup.getBoundingClientRect();
-        audioDragOffsetX = e.clientX - rect.left;
-        audioDragOffsetY = e.clientY - rect.top;
-        audioPopup.style.cursor = 'grabbing';
-        e.preventDefault();
-    });
-
-    // Host Controls Dragging
-    const controlsPopup = document.getElementById('hostControlsPopup');
-    const controlsHeader = document.getElementById('controlsHeader');
-
-    controlsHeader.addEventListener('mousedown', (e) => {
-        isDraggingControls = true;
-        const rect = controlsPopup.getBoundingClientRect();
-        controlsDragOffsetX = e.clientX - rect.left;
-        controlsDragOffsetY = e.clientY - rect.top;
-        controlsPopup.style.cursor = 'grabbing';
-        e.preventDefault();
-    });
-
-    // Participants Dragging
-    const participantsPopup = document.getElementById('participantsPopup');
-    const participantsHeader = document.getElementById('participantsHeader');
-
-    participantsHeader.addEventListener('mousedown', (e) => {
-        isDraggingParticipants = true;
-        const rect = participantsPopup.getBoundingClientRect();
-        participantsDragOffsetX = e.clientX - rect.left;
-        participantsDragOffsetY = e.clientY - rect.top;
-        participantsPopup.style.cursor = 'grabbing';
-        e.preventDefault();
-    });
-
-    // Global mouse move handler
-    document.addEventListener('mousemove', (e) => {
-        if (isDraggingAudio) {
-            let newX = e.clientX - audioDragOffsetX;
-            let newY = e.clientY - audioDragOffsetY;
-
-            const maxX = window.innerWidth - audioPopup.offsetWidth;
-            const maxY = window.innerHeight - audioPopup.offsetHeight;
-
-            newX = Math.max(0, Math.min(newX, maxX));
-            newY = Math.max(0, Math.min(newY, maxY));
-
-            audioPopup.style.left = newX + 'px';
-            audioPopup.style.top = newY + 'px';
-            audioPopup.style.transform = 'none';
-        }
-
-        if (isDraggingControls) {
-            let newX = e.clientX - controlsDragOffsetX;
-            let newY = e.clientY - controlsDragOffsetY;
-
-            const maxX = window.innerWidth - controlsPopup.offsetWidth;
-            const maxY = window.innerHeight - controlsPopup.offsetHeight;
-
-            newX = Math.max(0, Math.min(newX, maxX));
-            newY = Math.max(0, Math.min(newY, maxY));
-
-            controlsPopup.style.left = newX + 'px';
-            controlsPopup.style.top = newY + 'px';
-            controlsPopup.style.right = 'auto';
-            controlsPopup.style.transform = 'none';
-        }
-
-        if (isDraggingParticipants) {
-            let newX = e.clientX - participantsDragOffsetX;
-            let newY = e.clientY - participantsDragOffsetY;
-
-            const maxX = window.innerWidth - participantsPopup.offsetWidth;
-            const maxY = window.innerHeight - participantsPopup.offsetHeight;
-
-            newX = Math.max(0, Math.min(newX, maxX));
-            newY = Math.max(0, Math.min(newY, maxY));
-
-            participantsPopup.style.left = newX + 'px';
-            participantsPopup.style.top = newY + 'px';
-            participantsPopup.style.right = 'auto';
-            participantsPopup.style.transform = 'none';
-        }
-    });
-
-    // Global mouse up handler
-    document.addEventListener('mouseup', () => {
-        if (isDraggingAudio) {
-            isDraggingAudio = false;
-            audioPopup.style.cursor = 'move';
-        }
-        if (isDraggingControls) {
-            isDraggingControls = false;
-            controlsPopup.style.cursor = 'move';
-        }
-        if (isDraggingParticipants) {
-            isDraggingParticipants = false;
-            participantsPopup.style.cursor = 'move';
-        }
-    });
-}
-
-// COUNTDOWN TIMER FUNCTIONS
-function initializeMeetingTimer(endDateTime) {
-    if (!endDateTime) return;
-
-    meetingEndTime = new Date(endDateTime);
-
-    // Start the timer immediately
-    updateMeetingTimer();
-
-    // Update every second
-    if (meetingTimerInterval) {
-        clearInterval(meetingTimerInterval);
-    }
-    meetingTimerInterval = setInterval(updateMeetingTimer, 1000);
-}
-
-function updateMeetingTimer() {
-    if (!meetingEndTime) return;
-
-    const now = new Date();
-    const timeLeft = meetingEndTime - now;
-
-    // If meeting has ended
-    if (timeLeft <= 0) {
-        showMeetingEndedTimer();
-        return;
+    if (micVolumeSlider && micVolumeValue) {
+        micVolumeSlider.addEventListener('input', (e) => {
+            const volume = e.target.value;
+            micVolumeValue.textContent = volume + '%';
+            updateMicrophoneVolume(volume);
+        });
     }
 
-    const minutes = Math.floor(timeLeft / (1000 * 60));
-    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+    const speakerVolumeSlider = document.getElementById('speakerVolumeSlider');
+    const speakerVolumeValue = document.getElementById('speakerVolumeValue');
 
-    // Show timer only when ≤10 minutes remaining
-    const timerElement = document.getElementById('meetingCountdownTimer');
-    if (minutes <= 10) {
-        timerElement.style.display = 'block';
+    if (speakerVolumeSlider && speakerVolumeValue) {
+        speakerVolumeSlider.addEventListener('input', (e) => {
+            const volume = e.target.value;
+            speakerVolumeValue.textContent = volume + '%';
+            updateSpeakerVolume(volume);
+        });
+    }
 
-        // Update display
-        document.getElementById('timerDisplay').textContent =
-            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-
-        // Update timer style based on time remaining
-        timerElement.className = '';
-        if (minutes <= 2) {
-            timerElement.classList.add('timer-critical');
-        } else if (minutes <= 5) {
-            timerElement.classList.add('timer-warning');
-        } else {
-            timerElement.classList.add('timer-normal');
-        }
-
-        // Show warnings
-        if (minutes === 5 && seconds === 0 && !fiveMinuteWarningShown) {
-            fiveMinuteWarningShown = true;
-            sendTimerWarning('⏰ Meeting will end in 5 minutes.');
-        }
-
-        if (minutes === 1 && seconds === 0 && !oneMinuteWarningShown) {
-            oneMinuteWarningShown = true;
-            sendTimerWarning('⚠️ Meeting will end in 1 minute!');
-        }
-    } else {
-        timerElement.style.display = 'none';
+    const audioMonitoringToggle = document.getElementById('audioMonitoringToggle');
+    if (audioMonitoringToggle) {
+        audioMonitoringToggle.addEventListener('change', (e) => {
+            toggleAudioMonitoring(e.target.checked);
+        });
     }
 }
 
-function sendTimerWarning(message) {
-    // Send to chat
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-            type: 'chat',
-            payload: {
-                from: 'System',
-                text: message
-            }
-        }));
-    }
-
-    appendMessage({
-        from: 'System',
-        text: message
-    });
-}
-
-function showMeetingEndedTimer() {
-    const timerElement = document.getElementById('meetingCountdownTimer');
-    timerElement.style.display = 'block';
-    timerElement.className = 'timer-critical';
-    document.getElementById('timerDisplay').textContent = '00:00';
-    document.getElementById('timerText').innerHTML = '🔚 Meeting time has ended';
-
-    // Send final notification
-    sendTimerWarning('🔚 Meeting time has ended');
-
-    // Clear interval
-    if (meetingTimerInterval) {
-        clearInterval(meetingTimerInterval);
-        meetingTimerInterval = null;
-    }
-
-    // Close meeting after 3 seconds
-    setTimeout(() => {
-        if (ws) {
-            ws.close(1000, "Meeting time has ended");
-        }
-    }, 3000);
-}
-
-// ENABLE FULLSCREEN MODE FOR MEETING
-function enableFullscreenMeeting() {
-    const meetingDiv = document.getElementById('meeting');
-    meetingDiv.classList.add('fullscreen');
-    document.body.style.overflow = 'hidden';
-}
-
-// DISABLE FULLSCREEN MODE FOR MEETING
-function disableFullscreenMeeting() {
-    const meetingDiv = document.getElementById('meeting');
-    meetingDiv.classList.remove('fullscreen');
-    document.body.style.overflow = 'auto';
-}
-
-// Initialize audio context and monitoring
 async function initializeAudioContext() {
     try {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -2967,7 +2777,6 @@ async function initializeAudioContext() {
     }
 }
 
-// Setup audio monitoring
 function setupAudioMonitoring(stream) {
     if (!audioContext || !stream) return;
 
@@ -2986,7 +2795,6 @@ function setupAudioMonitoring(stream) {
     }
 }
 
-// Toggle audio monitoring
 function toggleAudioMonitoring(enabled) {
     if (!audioContext || !monitoringGainNode) return;
 
@@ -3006,7 +2814,6 @@ function toggleAudioMonitoring(enabled) {
     }
 }
 
-// Update microphone volume
 function updateMicrophoneVolume(volume) {
     if (micGainNode) {
         micGainNode.gain.value = volume / 100;
@@ -3027,7 +2834,6 @@ function updateMicrophoneVolume(volume) {
     }
 }
 
-// Update speaker volume
 function updateSpeakerVolume(volume) {
     if (speakerGainNode) {
         speakerGainNode.gain.value = volume / 100;
@@ -3040,232 +2846,7 @@ function updateSpeakerVolume(volume) {
     });
 }
 
-// Initialize time selectors
-function initializeTimeSelectors() {
-    const hourSelectors = ['startHour', 'endHour'];
-    hourSelectors.forEach(selectorId => {
-        const selector = document.getElementById(selectorId);
-        selector.innerHTML = '';
-        for (let i = 1; i <= 12; i++) {
-            const option = document.createElement('option');
-            option.value = i.toString().padStart(2, '0');
-            option.textContent = i.toString();
-            selector.appendChild(option);
-        }
-    });
-
-    const minuteSelectors = ['startMinute', 'endMinute'];
-    minuteSelectors.forEach(selectorId => {
-        const selector = document.getElementById(selectorId);
-        selector.innerHTML = '';
-        ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].forEach(minute => {
-            const option = document.createElement('option');
-            option.value = minute;
-            option.textContent = minute;
-            selector.appendChild(option);
-        });
-    });
-}
-
-// Set start time from custom picker
-function setStartTime() {
-    const hour = document.getElementById('startHour').value;
-    const minute = document.getElementById('startMinute').value;
-    const ampm = document.getElementById('startAmPm').value;
-
-    let hour24 = parseInt(hour);
-    if (ampm === 'PM' && hour24 !== 12) hour24 += 12;
-    if (ampm === 'AM' && hour24 === 12) hour24 = 0;
-
-    const timeString = hour24.toString().padStart(2, '0') + ':' + minute;
-    document.getElementById('meetingStartTime').value = timeString;
-
-    // Show success notification
-    showSuccessNotification(`Start time set to ${hour}:${minute} ${ampm}`);
-}
-
-// Set end time from custom picker
-function setEndTime() {
-    const hour = document.getElementById('endHour').value;
-    const minute = document.getElementById('endMinute').value;
-    const ampm = document.getElementById('endAmPm').value;
-
-    let hour24 = parseInt(hour);
-    if (ampm === 'PM' && hour24 !== 12) hour24 += 12;
-    if (ampm === 'AM' && hour24 === 12) hour24 = 0;
-
-    const timeString = hour24.toString().padStart(2, '0') + ':' + minute;
-    document.getElementById('meetingEndTime').value = timeString;
-
-    // Show success notification
-    showSuccessNotification(`End time set to ${hour}:${minute} ${ampm}`);
-}
-
-// Show success notification
-function showSuccessNotification(message) {
-    const notification = document.createElement('div');
-    notification.className = 'success-notification';
-    notification.textContent = message;
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-        notification.remove();
-    }, 3000);
-}
-
-// Toggle floating participant panel during screen sharing
-function toggleFloatingPanel() {
-    const container = document.getElementById('floatingParticipantsContainer');
-    const minimizeBtn = document.querySelector('.minimize-btn');
-
-    if (isFloatingPanelMinimized) {
-        container.style.display = 'block';
-        minimizeBtn.textContent = '−';
-        isFloatingPanelMinimized = false;
-    } else {
-        container.style.display = 'none';
-        minimizeBtn.textContent = '+';
-        isFloatingPanelMinimized = true;
-    }
-}
-
-// Create bubble animation for reactions
-function createReactionBubble(emoji) {
-    const screenArea = document.getElementById('participantGrid').style.display !== 'none' ?
-        document.getElementById('participantGrid') : document.getElementById('screenVideo');
-
-    if (!screenArea || screenArea.classList.contains('hidden')) return;
-
-    const bubble = document.createElement('div');
-    bubble.className = 'reaction-bubble';
-    bubble.textContent = emoji;
-
-    const rect = screenArea.getBoundingClientRect();
-    const randomX = Math.random() * (rect.width - 60);
-    const randomY = Math.random() * (rect.height - 60);
-
-    bubble.style.left = randomX + 'px';
-    bubble.style.top = randomY + 'px';
-
-    screenArea.appendChild(bubble);
-
-    setTimeout(() => {
-        if (bubble.parentNode) {
-            bubble.parentNode.removeChild(bubble);
-        }
-    }, 3000);
-}
-
-// Chat dragging functionality
-function initializeChatDragging() {
-    const chatPopup = document.getElementById('chatPopup');
-    const chatHeader = document.getElementById('chatHeader');
-
-    chatHeader.addEventListener('mousedown', (e) => {
-        isDraggingChat = true;
-        const rect = chatPopup.getBoundingClientRect();
-        chatDragOffsetX = e.clientX - rect.left;
-        chatDragOffsetY = e.clientY - rect.top;
-        chatPopup.style.cursor = 'grabbing';
-        e.preventDefault();
-    });
-
-    document.addEventListener('mousemove', (e) => {
-        if (!isDraggingChat) return;
-
-        const chatPopup = document.getElementById('chatPopup');
-        let newX = e.clientX - chatDragOffsetX;
-        let newY = e.clientY - chatDragOffsetY;
-
-        const maxX = window.innerWidth - chatPopup.offsetWidth;
-        const maxY = window.innerHeight - chatPopup.offsetHeight;
-
-        newX = Math.max(0, Math.min(newX, maxX));
-        newY = Math.max(0, Math.min(newY, maxY));
-
-        chatPopup.style.left = newX + 'px';
-        chatPopup.style.top = newY + 'px';
-        chatPopup.style.right = 'auto';
-        chatPopup.style.transform = 'none';
-    });
-
-    document.addEventListener('mouseup', () => {
-        if (isDraggingChat) {
-            isDraggingChat = false;
-            const chatPopup = document.getElementById('chatPopup');
-            chatPopup.style.cursor = 'move';
-        }
-    });
-}
-
-// Floating panel dragging functionality
-function initializeFloatingPanelDragging() {
-    const floatingPanel = document.getElementById('floatingParticipantPanel');
-    const panelHeader = document.getElementById('floatingPanelHeader');
-
-    panelHeader.addEventListener('mousedown', (e) => {
-        isDraggingPanel = true;
-        const rect = floatingPanel.getBoundingClientRect();
-        panelDragOffsetX = e.clientX - rect.left;
-        panelDragOffsetY = e.clientY - rect.top;
-        floatingPanel.style.cursor = 'grabbing';
-        e.preventDefault();
-    });
-
-    document.addEventListener('mousemove', (e) => {
-        if (!isDraggingPanel) return;
-
-        const floatingPanel = document.getElementById('floatingParticipantPanel');
-        let newX = e.clientX - panelDragOffsetX;
-        let newY = e.clientY - panelDragOffsetY;
-
-        const maxX = window.innerWidth - floatingPanel.offsetWidth;
-        const maxY = window.innerHeight - floatingPanel.offsetHeight;
-
-        newX = Math.max(0, Math.min(newX, maxX));
-        newY = Math.max(0, Math.min(newY, maxY));
-
-        floatingPanel.style.left = newX + 'px';
-        floatingPanel.style.top = newY + 'px';
-        floatingPanel.style.transform = 'none';
-    });
-
-    document.addEventListener('mouseup', () => {
-        if (isDraggingPanel) {
-            isDraggingPanel = false;
-            const floatingPanel = document.getElementById('floatingParticipantPanel');
-            floatingPanel.style.cursor = 'move';
-        }
-    });
-}
-
-// Initialize audio controls
-function initializeAudioControls() {
-    const micVolumeSlider = document.getElementById('micVolumeSlider');
-    const micVolumeValue = document.getElementById('micVolumeValue');
-
-    micVolumeSlider.addEventListener('input', (e) => {
-        const volume = e.target.value;
-        micVolumeValue.textContent = volume + '%';
-        updateMicrophoneVolume(volume);
-    });
-
-    const speakerVolumeSlider = document.getElementById('speakerVolumeSlider');
-    const speakerVolumeValue = document.getElementById('speakerVolumeValue');
-
-    speakerVolumeSlider.addEventListener('input', (e) => {
-        const volume = e.target.value;
-        speakerVolumeValue.textContent = volume + '%';
-        updateSpeakerVolume(volume);
-    });
-
-    const audioMonitoringToggle = document.getElementById('audioMonitoringToggle');
-    audioMonitoringToggle.addEventListener('change', (e) => {
-        toggleAudioMonitoring(e.target.checked);
-    });
-}
-
-// Authentication functions
+// ========== AUTHENTICATION FUNCTIONS ==========
 function showModal(modalId) {
     document.getElementById(modalId).style.display = 'block';
 }
@@ -3311,7 +2892,7 @@ function showForgotPassword() {
     showModal('forgotPasswordModal');
 }
 
-// Host password verification
+// ========== HOST PASSWORD VERIFICATION ==========
 function verifyHostPassword() {
     const enteredPassword = document.getElementById('hostPasswordInput').value.trim();
 
@@ -3367,6 +2948,7 @@ function verifyHostPasswordForJoin() {
     }
 }
 
+// ========== USER MANAGEMENT ==========
 async function signup() {
     const name = document.getElementById('signupName').value.trim();
     const email = document.getElementById('signupEmail').value.trim();
@@ -3545,6 +3127,7 @@ async function resetPassword() {
     }
 }
 
+// ========== MEETING MANAGEMENT ==========
 async function loadUserMeetings() {
     if (!authToken) return;
 
@@ -3676,7 +3259,7 @@ function checkExistingSession() {
     }
 }
 
-// Recording functions
+// ========== RECORDING FUNCTIONS ==========
 function startRecording() {
     if (!localStream) {
         alert('No media stream available for recording');
@@ -3843,18 +3426,24 @@ async function uploadRecording(blob) {
     }
 }
 
+// ========== FIXED: EXPORT PARTICIPANTS ==========
 async function exportParticipants() {
     if (!roomName) return;
 
     try {
-        const response = await fetch(`/export_participants?code=${roomName}`);
+        const response = await fetch(`/export_participants?code=${roomName}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            }
+        });
 
         if (response.ok) {
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `participants_${roomName}.xlsx`;
+            a.download = `participants_${roomName}_${new Date().toISOString().split('T')[0]}.xlsx`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -3862,11 +3451,13 @@ async function exportParticipants() {
 
             showSuccessNotification('✅ Participants data exported successfully!');
         } else {
-            alert('❌ Failed to export participants data');
+            const errorText = await response.text();
+            console.error('Export failed:', errorText);
+            alert('❌ Failed to export participants data: ' + errorText);
         }
     } catch (err) {
         console.error('Error exporting participants:', err);
-        alert('❌ Failed to export participants data');
+        alert('❌ Failed to export participants data: ' + err.message);
     }
 }
 
@@ -3901,7 +3492,7 @@ async function viewRecordings() {
     }
 }
 
-// Chat functions
+// ========== CHAT FUNCTIONS ==========
 function toggleChatPopup() {
     const chatPopup = document.getElementById('chatPopup');
     const isVisible = chatPopup.style.display === 'block';
@@ -3919,7 +3510,7 @@ function toggleChatPopup() {
     }
 }
 
-// Reactions functions
+// ========== REACTIONS FUNCTIONS ==========
 function toggleReactionsPopup() {
     const reactionsPopup = document.getElementById('reactionsPopup');
     const isVisible = reactionsPopup.style.display === 'block';
@@ -3955,7 +3546,7 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// Utility functions
+// ========== UTILITY FUNCTIONS ==========
 function copyToClipboard(id) {
     const input = document.getElementById(id);
     input.select();
@@ -3999,9 +3590,11 @@ Share this information with participants.`;
     });
 }
 
-// IMPROVED appendMessage function with delete functionality
+// ========== MESSAGE FUNCTIONS ==========
 function appendMessage(item) {
     const div = document.getElementById('messages');
+    if (!div) return;
+    
     const messageEl = document.createElement('div');
     messageEl.className = 'chat-message';
 
@@ -4110,7 +3703,33 @@ function flashReaction(emoji) {
     }
 }
 
-// Time and countdown functions
+function createReactionBubble(emoji) {
+    const screenArea = document.getElementById('participantGrid').style.display !== 'none' ?
+        document.getElementById('participantGrid') : document.getElementById('screenVideo');
+
+    if (!screenArea || screenArea.classList.contains('hidden')) return;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'reaction-bubble';
+    bubble.textContent = emoji;
+
+    const rect = screenArea.getBoundingClientRect();
+    const randomX = Math.random() * (rect.width - 60);
+    const randomY = Math.random() * (rect.height - 60);
+
+    bubble.style.left = randomX + 'px';
+    bubble.style.top = randomY + 'px';
+
+    screenArea.appendChild(bubble);
+
+    setTimeout(() => {
+        if (bubble.parentNode) {
+            bubble.parentNode.removeChild(bubble);
+        }
+    }, 3000);
+}
+
+// ========== TIME FUNCTIONS ==========
 function formatTime(date) {
     return date.toLocaleTimeString('en-US', {
         hour: '2-digit',
@@ -4166,6 +3785,416 @@ function startCountdown(targetTime, elementId, isHost = false) {
     }, 1000);
 }
 
+// ========== COUNTDOWN TIMER ==========
+function initializeMeetingTimer(endDateTime) {
+    if (!endDateTime) return;
+
+    meetingEndTime = new Date(endDateTime);
+
+    // Start the timer immediately
+    updateMeetingTimer();
+
+    // Update every second
+    if (meetingTimerInterval) {
+        clearInterval(meetingTimerInterval);
+    }
+    meetingTimerInterval = setInterval(updateMeetingTimer, 1000);
+}
+
+function updateMeetingTimer() {
+    if (!meetingEndTime) return;
+
+    const now = new Date();
+    const timeLeft = meetingEndTime - now;
+
+    // If meeting has ended
+    if (timeLeft <= 0) {
+        showMeetingEndedTimer();
+        return;
+    }
+
+    const minutes = Math.floor(timeLeft / (1000 * 60));
+    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+
+    // Show timer only when ≤10 minutes remaining
+    const timerElement = document.getElementById('meetingCountdownTimer');
+    if (minutes <= 10) {
+        timerElement.style.display = 'block';
+
+        // Update display
+        document.getElementById('timerDisplay').textContent =
+            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+        // Update timer style based on time remaining
+        timerElement.className = '';
+        if (minutes <= 2) {
+            timerElement.classList.add('timer-critical');
+        } else if (minutes <= 5) {
+            timerElement.classList.add('timer-warning');
+        } else {
+            timerElement.classList.add('timer-normal');
+        }
+
+        // Show warnings
+        if (minutes === 5 && seconds === 0 && !fiveMinuteWarningShown) {
+            fiveMinuteWarningShown = true;
+            sendTimerWarning('⏰ Meeting will end in 5 minutes.');
+        }
+
+        if (minutes === 1 && seconds === 0 && !oneMinuteWarningShown) {
+            oneMinuteWarningShown = true;
+            sendTimerWarning('⚠️ Meeting will end in 1 minute!');
+        }
+    } else {
+        timerElement.style.display = 'none';
+    }
+}
+
+function sendTimerWarning(message) {
+    // Send to chat
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            type: 'chat',
+            payload: {
+                from: 'System',
+                text: message
+            }
+        }));
+    }
+
+    appendMessage({
+        from: 'System',
+        text: message
+    });
+}
+
+function showMeetingEndedTimer() {
+    const timerElement = document.getElementById('meetingCountdownTimer');
+    timerElement.style.display = 'block';
+    timerElement.className = 'timer-critical';
+    document.getElementById('timerDisplay').textContent = '00:00';
+    document.getElementById('timerText').innerHTML = '🔚 Meeting time has ended';
+
+    // Send final notification
+    sendTimerWarning('🔚 Meeting time has ended');
+
+    // Clear interval
+    if (meetingTimerInterval) {
+        clearInterval(meetingTimerInterval);
+        meetingTimerInterval = null;
+    }
+
+    // Close meeting after 3 seconds
+    setTimeout(() => {
+        if (ws) {
+            ws.close(1000, "Meeting time has ended");
+        }
+    }, 3000);
+}
+
+// ========== FULLSCREEN FUNCTIONS ==========
+function enableFullscreenMeeting() {
+    const meetingDiv = document.getElementById('meeting');
+    meetingDiv.classList.add('fullscreen');
+    document.body.style.overflow = 'hidden';
+}
+
+function disableFullscreenMeeting() {
+    const meetingDiv = document.getElementById('meeting');
+    meetingDiv.classList.remove('fullscreen');
+    document.body.style.overflow = 'auto';
+}
+
+// ========== TIME SELECTORS ==========
+function initializeTimeSelectors() {
+    const hourSelectors = ['startHour', 'endHour'];
+    hourSelectors.forEach(selectorId => {
+        const selector = document.getElementById(selectorId);
+        if (selector) {
+            selector.innerHTML = '';
+            for (let i = 1; i <= 12; i++) {
+                const option = document.createElement('option');
+                option.value = i.toString().padStart(2, '0');
+                option.textContent = i.toString();
+                selector.appendChild(option);
+            }
+        }
+    });
+
+    const minuteSelectors = ['startMinute', 'endMinute'];
+    minuteSelectors.forEach(selectorId => {
+        const selector = document.getElementById(selectorId);
+        if (selector) {
+            selector.innerHTML = '';
+            ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].forEach(minute => {
+                const option = document.createElement('option');
+                option.value = minute;
+                option.textContent = minute;
+                selector.appendChild(option);
+            });
+        }
+    });
+}
+
+function setStartTime() {
+    const hour = document.getElementById('startHour').value;
+    const minute = document.getElementById('startMinute').value;
+    const ampm = document.getElementById('startAmPm').value;
+
+    let hour24 = parseInt(hour);
+    if (ampm === 'PM' && hour24 !== 12) hour24 += 12;
+    if (ampm === 'AM' && hour24 === 12) hour24 = 0;
+
+    const timeString = hour24.toString().padStart(2, '0') + ':' + minute;
+    document.getElementById('meetingStartTime').value = timeString;
+
+    // Show success notification
+    showSuccessNotification(`Start time set to ${hour}:${minute} ${ampm}`);
+}
+
+function setEndTime() {
+    const hour = document.getElementById('endHour').value;
+    const minute = document.getElementById('endMinute').value;
+    const ampm = document.getElementById('endAmPm').value;
+
+    let hour24 = parseInt(hour);
+    if (ampm === 'PM' && hour24 !== 12) hour24 += 12;
+    if (ampm === 'AM' && hour24 === 12) hour24 = 0;
+
+    const timeString = hour24.toString().padStart(2, '0') + ':' + minute;
+    document.getElementById('meetingEndTime').value = timeString;
+
+    // Show success notification
+    showSuccessNotification(`End time set to ${hour}:${minute} ${ampm}`);
+}
+
+function showSuccessNotification(message) {
+    const notification = document.createElement('div');
+    notification.className = 'success-notification';
+    notification.textContent = message;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+// ========== FLOATING PANEL ==========
+function toggleFloatingPanel() {
+    const container = document.getElementById('floatingParticipantsContainer');
+    const minimizeBtn = document.querySelector('.minimize-btn');
+
+    if (isFloatingPanelMinimized) {
+        container.style.display = 'block';
+        minimizeBtn.textContent = '−';
+        isFloatingPanelMinimized = false;
+    } else {
+        container.style.display = 'none';
+        minimizeBtn.textContent = '+';
+        isFloatingPanelMinimized = true;
+    }
+}
+
+// ========== DRAGGING FUNCTIONS ==========
+function initializeChatDragging() {
+    const chatPopup = document.getElementById('chatPopup');
+    const chatHeader = document.getElementById('chatHeader');
+
+    if (chatHeader) {
+        chatHeader.addEventListener('mousedown', (e) => {
+            isDraggingChat = true;
+            const rect = chatPopup.getBoundingClientRect();
+            chatDragOffsetX = e.clientX - rect.left;
+            chatDragOffsetY = e.clientY - rect.top;
+            chatPopup.style.cursor = 'grabbing';
+            e.preventDefault();
+        });
+    }
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDraggingChat) return;
+
+        const chatPopup = document.getElementById('chatPopup');
+        let newX = e.clientX - chatDragOffsetX;
+        let newY = e.clientY - chatDragOffsetY;
+
+        const maxX = window.innerWidth - chatPopup.offsetWidth;
+        const maxY = window.innerHeight - chatPopup.offsetHeight;
+
+        newX = Math.max(0, Math.min(newX, maxX));
+        newY = Math.max(0, Math.min(newY, maxY));
+
+        chatPopup.style.left = newX + 'px';
+        chatPopup.style.top = newY + 'px';
+        chatPopup.style.right = 'auto';
+        chatPopup.style.transform = 'none';
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDraggingChat) {
+            isDraggingChat = false;
+            const chatPopup = document.getElementById('chatPopup');
+            chatPopup.style.cursor = 'move';
+        }
+    });
+}
+
+function initializeFloatingPanelDragging() {
+    const floatingPanel = document.getElementById('floatingParticipantPanel');
+    const panelHeader = document.getElementById('floatingPanelHeader');
+
+    if (panelHeader) {
+        panelHeader.addEventListener('mousedown', (e) => {
+            isDraggingPanel = true;
+            const rect = floatingPanel.getBoundingClientRect();
+            panelDragOffsetX = e.clientX - rect.left;
+            panelDragOffsetY = e.clientY - rect.top;
+            floatingPanel.style.cursor = 'grabbing';
+            e.preventDefault();
+        });
+    }
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDraggingPanel) return;
+
+        const floatingPanel = document.getElementById('floatingParticipantPanel');
+        let newX = e.clientX - panelDragOffsetX;
+        let newY = e.clientY - panelDragOffsetY;
+
+        const maxX = window.innerWidth - floatingPanel.offsetWidth;
+        const maxY = window.innerHeight - floatingPanel.offsetHeight;
+
+        newX = Math.max(0, Math.min(newX, maxX));
+        newY = Math.max(0, Math.min(newY, maxY));
+
+        floatingPanel.style.left = newX + 'px';
+        floatingPanel.style.top = newY + 'px';
+        floatingPanel.style.transform = 'none';
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDraggingPanel) {
+            isDraggingPanel = false;
+            const floatingPanel = document.getElementById('floatingParticipantPanel');
+            floatingPanel.style.cursor = 'move';
+        }
+    });
+}
+
+function initializePopupDragging() {
+    // Audio Settings Dragging
+    const audioPopup = document.getElementById('audioSettingsPopup');
+    const audioHeader = document.getElementById('audioHeader');
+
+    if (audioHeader) {
+        audioHeader.addEventListener('mousedown', (e) => {
+            isDraggingAudio = true;
+            const rect = audioPopup.getBoundingClientRect();
+            audioDragOffsetX = e.clientX - rect.left;
+            audioDragOffsetY = e.clientY - rect.top;
+            audioPopup.style.cursor = 'grabbing';
+            e.preventDefault();
+        });
+    }
+
+    // Host Controls Dragging
+    const controlsPopup = document.getElementById('hostControlsPopup');
+    const controlsHeader = document.getElementById('controlsHeader');
+
+    if (controlsHeader) {
+        controlsHeader.addEventListener('mousedown', (e) => {
+            isDraggingControls = true;
+            const rect = controlsPopup.getBoundingClientRect();
+            controlsDragOffsetX = e.clientX - rect.left;
+            controlsDragOffsetY = e.clientY - rect.top;
+            controlsPopup.style.cursor = 'grabbing';
+            e.preventDefault();
+        });
+    }
+
+    // Participants Dragging
+    const participantsPopup = document.getElementById('participantsPopup');
+    const participantsHeader = document.getElementById('participantsHeader');
+
+    if (participantsHeader) {
+        participantsHeader.addEventListener('mousedown', (e) => {
+            isDraggingParticipants = true;
+            const rect = participantsPopup.getBoundingClientRect();
+            participantsDragOffsetX = e.clientX - rect.left;
+            participantsDragOffsetY = e.clientY - rect.top;
+            participantsPopup.style.cursor = 'grabbing';
+            e.preventDefault();
+        });
+    }
+
+    // Global mouse move handler
+    document.addEventListener('mousemove', (e) => {
+        if (isDraggingAudio && audioPopup) {
+            let newX = e.clientX - audioDragOffsetX;
+            let newY = e.clientY - audioDragOffsetY;
+
+            const maxX = window.innerWidth - audioPopup.offsetWidth;
+            const maxY = window.innerHeight - audioPopup.offsetHeight;
+
+            newX = Math.max(0, Math.min(newX, maxX));
+            newY = Math.max(0, Math.min(newY, maxY));
+
+            audioPopup.style.left = newX + 'px';
+            audioPopup.style.top = newY + 'px';
+            audioPopup.style.transform = 'none';
+        }
+
+        if (isDraggingControls && controlsPopup) {
+            let newX = e.clientX - controlsDragOffsetX;
+            let newY = e.clientY - controlsDragOffsetY;
+
+            const maxX = window.innerWidth - controlsPopup.offsetWidth;
+            const maxY = window.innerHeight - controlsPopup.offsetHeight;
+
+            newX = Math.max(0, Math.min(newX, maxX));
+            newY = Math.max(0, Math.min(newY, maxY));
+
+            controlsPopup.style.left = newX + 'px';
+            controlsPopup.style.top = newY + 'px';
+            controlsPopup.style.right = 'auto';
+            controlsPopup.style.transform = 'none';
+        }
+
+        if (isDraggingParticipants && participantsPopup) {
+            let newX = e.clientX - participantsDragOffsetX;
+            let newY = e.clientY - participantsDragOffsetY;
+
+            const maxX = window.innerWidth - participantsPopup.offsetWidth;
+            const maxY = window.innerHeight - participantsPopup.offsetHeight;
+
+            newX = Math.max(0, Math.min(newX, maxX));
+            newY = Math.max(0, Math.min(newY, maxY));
+
+            participantsPopup.style.left = newX + 'px';
+            participantsPopup.style.top = newY + 'px';
+            participantsPopup.style.right = 'auto';
+            participantsPopup.style.transform = 'none';
+        }
+    });
+
+    // Global mouse up handler
+    document.addEventListener('mouseup', () => {
+        if (isDraggingAudio) {
+            isDraggingAudio = false;
+            if (audioPopup) audioPopup.style.cursor = 'move';
+        }
+        if (isDraggingControls) {
+            isDraggingControls = false;
+            if (controlsPopup) controlsPopup.style.cursor = 'move';
+        }
+        if (isDraggingParticipants) {
+            isDraggingParticipants = false;
+            if (participantsPopup) participantsPopup.style.cursor = 'move';
+        }
+    });
+}
+
+// ========== MEETING TIME CHECK ==========
 function checkMeetingTime(scheduledDateTime, endDateTime, roomCode) {
     const now = new Date();
     const scheduledTime = new Date(scheduledDateTime);
@@ -4173,8 +4202,14 @@ function checkMeetingTime(scheduledDateTime, endDateTime, roomCode) {
 
     if (isHost || isCoHost) {
         if (now < scheduledTime) {
-            document.getElementById('hostScheduledTimeInMeeting').textContent = formatTime(scheduledTime);
-            document.getElementById('hostEarlyAccess').classList.remove('hidden');
+            const hostScheduledTimeEl = document.getElementById('hostScheduledTimeInMeeting');
+            if (hostScheduledTimeEl) {
+                hostScheduledTimeEl.textContent = formatTime(scheduledTime);
+            }
+            const hostEarlyAccessEl = document.getElementById('hostEarlyAccess');
+            if (hostEarlyAccessEl) {
+                hostEarlyAccessEl.classList.remove('hidden');
+            }
             startCountdown(scheduledTime, 'hostCountdownInMeeting', true);
         }
         return true;
