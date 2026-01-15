@@ -1826,6 +1826,7 @@ button:hover {
     <p>⏳ Please wait for the host to start the meeting.</p>
     <div id="countdown"></div>
     <button onclick="location.reload()" style="margin-top: 15px; background: #6c757d; color: white;">🔄 Refresh</button>
+    
 </div>
 
 <!-- Host Early Access -->
@@ -2013,6 +2014,7 @@ button:hover {
                 <button id="reactionsBtn">😀</button>
                 <button id="participantsToggleBtn2">👥 Participants (<span id="participantCountBadge2">0</span>)</button>
                 <button id="hostControlsBtn" class="hidden">⚙️ Controls</button>
+                <button onclick="logWebRTCStats()" style="background: #6c757d; color: white;">🔧 Debug</button>
                 <button id="leaveBtn">🚪 Leave</button>
             </div>
         </div>
@@ -2102,6 +2104,28 @@ let isScreenSharing = false;
 let screenSharingUserId = null;
 
 // Initialize the application
+
+    // === NETWORK STATUS FUNCTION (ADD THIS SOMEWHERE EARLIER, AROUND LINE 200-300) ===
+function checkNetworkStatus() {
+    console.log("=== Network Status ===");
+    console.log("Current time:", new Date().toISOString());
+    console.log("WebSocket State:", ws ? ws.readyState : "No WebSocket");
+    console.log("Hostname:", window.location.hostname);
+    console.log("Protocol:", window.location.protocol);
+    console.log("User Media Permission:", 
+        navigator.mediaDevices ? "Available" : "Not available");
+    console.log("Screen Sharing Support:", 
+        navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia ? "Available" : "Not available");
+    console.log("WebRTC Support:", 
+        window.RTCPeerConnection ? "Available" : "Not available");
+    console.log("Active Peer Connections:", Object.keys(peers).length);
+    console.log("Is Sharing Screen:", isSharing);
+}
+
+// Make it globally accessible from browser console
+window.checkNetwork = checkNetworkStatus;
+// === END FUNCTION ===
+    
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
 });
@@ -2177,10 +2201,27 @@ function connectWebSocket(room, username, role = 'participant', hostPassword = '
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/${room}`;
 
+    // === NETWORK CHECK ===
+    console.log("=== Network Status Check ===");
+    console.log("Joining room:", room);
+    console.log("WebSocket URL:", wsUrl);
+    console.log("Hostname:", window.location.hostname);
+    console.log("Protocol:", window.location.protocol);
+    console.log("User Media Permission:", 
+        navigator.mediaDevices ? "Available" : "Not available");
+    console.log("WebSocket State before connection:", ws ? ws.readyState : "No WebSocket");
+    // === END NETWORK CHECK ===
+
     ws = new WebSocket(wsUrl);
 
     ws.onopen = function() {
         console.log('WebSocket connected');
+
+        // === CONNECTION SUCCESS LOG ===
+        console.log("=== WebSocket Connection Successful ===");
+        console.log("Connected to:", wsUrl);
+        console.log("ReadyState:", ws.readyState);
+        // === END CONNECTION LOG ===
 
         // Send join message with proper role and authentication
         const joinMessage = {
@@ -2291,6 +2332,14 @@ function handleScreenShareStart(payload) {
             from: 'System',
             text: `🖥️ ${payload.from} started screen sharing`
         });
+        
+        // IMPORTANT: Request renegotiation for screen stream
+        if (Object.keys(peers).length > 0) {
+            Object.keys(peers).forEach(peerId => {
+                // Trigger renegotiation to get screen stream
+                makeOffer(peerId);
+            });
+        }
     }
 }
 
@@ -4201,28 +4250,121 @@ async function createPeerConnection(peerId) {
     };
 
     pc.ontrack = (event) => {
+        console.log('Received track from peer:', peerId, event.track.kind);
         const remoteVideo = document.getElementById(`remote-${peerId}`) || createRemoteVideo(peerId);
+        
         if (event.streams && event.streams[0]) {
             remoteVideo.srcObject = event.streams[0];
+            
+            // If this is a screen sharing stream, handle it specially
+            if (event.track.kind === 'video' && isScreenSharing) {
+                console.log('Screen sharing stream received from:', peerId);
+                const screenVideo = document.getElementById('screenVideo');
+                screenVideo.srcObject = event.streams[0];
+                screenVideo.classList.remove('hidden');
+                updateMainVideoArea();
+            }
+            
             setTimeout(() => updateMainVideoArea(), 100);
         }
     };
 
+    // === ADD ERROR LOGGING HERE ===
+    pc.onconnectionstatechange = () => {
+        console.log(`Connection state with ${peerId}: ${pc.connectionState}`);
+    };
+
+    pc.oniceconnectionstatechange = () => {
+        console.log(`ICE connection state with ${peerId}: ${pc.iceConnectionState}`);
+        if (pc.iceConnectionState === 'failed') {
+            console.error(`ICE connection failed with ${peerId}, attempting to restart...`);
+            // You could add reconnection logic here
+        }
+    };
+
+    pc.onicegatheringstatechange = () => {
+        console.log(`ICE gathering state with ${peerId}: ${pc.iceGatheringState}`);
+    };
+
+    pc.onsignalingstatechange = () => {
+        console.log(`Signaling state with ${peerId}: ${pc.signalingState}`);
+    };
+
+    // Handle errors
+    pc.onerror = (error) => {
+        console.error(`WebRTC error with ${peerId}:`, error);
+    };
+    // === END ERROR LOGGING ===
+
+    // Add local tracks
     if (localStream) {
         localStream.getTracks().forEach(track => {
             pc.addTrack(track, localStream);
         });
     }
 
-    if (screenStream) {
+    // Add screen sharing track if available
+    if (screenStream && isSharing) {
         screenStream.getTracks().forEach(track => {
             pc.addTrack(track, screenStream);
         });
     }
 
+    // Store peerId on the connection for reference
+    pc.peerId = peerId;
+
     peers[peerId] = pc;
     return pc;
 }
+
+    // Add this function anywhere in your JavaScript section (around line 2500)
+function logWebRTCStats() {
+    console.log("=== WebRTC Debug Info ===");
+    console.log("Local Stream:", localStream ? "Available" : "Not available");
+    console.log("Screen Stream:", screenStream ? "Available" : "Not available");
+    console.log("Is Sharing Screen:", isSharing);
+    console.log("Is Screen Sharing Active:", isScreenSharing);
+    console.log("Screen Sharing User:", screenSharingUserId);
+    console.log("Number of Peer Connections:", Object.keys(peers).length);
+    
+    if (localStream) {
+        const tracks = localStream.getTracks();
+        console.log("Local Tracks:", tracks.map(t => `${t.kind}:${t.enabled ? 'enabled' : 'disabled'}`));
+    }
+    
+    if (screenStream) {
+        const screenTracks = screenStream.getTracks();
+        console.log("Screen Tracks:", screenTracks.map(t => `${t.kind}:${t.enabled ? 'enabled' : 'disabled'}`));
+    }
+    
+    Object.keys(peers).forEach(peerId => {
+        const pc = peers[peerId];
+        console.log(`Peer ${peerId}:`);
+        console.log(`  - Connection State: ${pc.connectionState}`);
+        console.log(`  - ICE State: ${pc.iceConnectionState}`);
+        console.log(`  - Signaling State: ${pc.signalingState}`);
+        
+        const senders = pc.getSenders();
+        console.log(`  - Senders: ${senders.length}`);
+        senders.forEach((sender, i) => {
+            if (sender.track) {
+                console.log(`    Sender ${i}: ${sender.track.kind} - ${sender.track.readyState}`);
+            }
+        });
+        
+        const receivers = pc.getReceivers();
+        console.log(`  - Receivers: ${receivers.length}`);
+        receivers.forEach((receiver, i) => {
+            if (receiver.track) {
+                console.log(`    Receiver ${i}: ${receiver.track.kind} - ${receiver.track.readyState}`);
+            }
+        });
+    });
+    console.log("=== End Debug Info ===");
+}
+
+// You can call this function from browser console when debugging
+window.debugWebRTC = logWebRTCStats;
 
 function createRemoteVideo(peerId) {
     const container = document.createElement('div');
@@ -4915,7 +5057,7 @@ document.getElementById('videoBtn').addEventListener('click', () => {
     toggleLocalVideo();
 });
 
-// --- FIXED SCREEN SHARING BLOCK ---
+// FIXED: Screen sharing with proper WebRTC renegotiation
 document.getElementById('shareScreenBtn').onclick = async () => {
     if (isSharing) {
         stopScreenShare();
@@ -4923,34 +5065,39 @@ document.getElementById('shareScreenBtn').onclick = async () => {
     }
 
     try {
-        // 1. Get the screen stream
-        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-
-        // 2. Show it on your own screen
-        const screenVideoElement = document.getElementById('screenVideo');
-        if (screenVideoElement) {
-            screenVideoElement.srcObject = screenStream;
-            screenVideoElement.classList.remove('hidden');
-        }
-
-        // 3. THE FIX: Instead of adding a new track (which causes black screens), 
-        // we swap the camera track for the screen track in the existing "pipe".
-        const screenTrack = screenStream.getVideoTracks()[0];
-        
-        Object.values(peers).forEach(pc => {
-            const senders = pc.getSenders();
-            // Find the sender that is currently handling your camera (video)
-            const videoSender = senders.find(s => s.track && s.track.kind === 'video');
-            if (videoSender) {
-                videoSender.replaceTrack(screenTrack);
-            }
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ 
+            video: { 
+                cursor: "always",
+                displaySurface: "monitor"
+            },
+            audio: false
         });
 
-        // 4. Notify the WebSocket Server
+        document.getElementById('screenVideo').srcObject = screenStream;
+        document.getElementById('screenVideo').classList.remove('hidden');
+
+        // Add screen tracks to all existing peer connections
+        Object.values(peers).forEach(pc => {
+            screenStream.getTracks().forEach(track => {
+                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                if (sender) {
+                    sender.replaceTrack(track);
+                } else {
+                    pc.addTrack(track, screenStream);
+                }
+            });
+            
+            // Trigger renegotiation
+            setTimeout(() => makeOffer(pc.peerId), 100);
+        });
+
+        // FIXED: Send proper screen sharing start message
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({
                 type: 'screen-share-start',
-                payload: { from: userName }
+                payload: {
+                    from: userName
+                }
             }));
         }
 
@@ -4963,8 +5110,7 @@ document.getElementById('shareScreenBtn').onclick = async () => {
 
         updateMainVideoArea();
 
-        // Handle the "Stop Sharing" button in the browser's own popup
-        screenTrack.onended = stopScreenShare;
+        screenStream.getTracks()[0].onended = stopScreenShare;
 
     } catch (e) {
         console.error('Screen share error:', e);
@@ -4980,30 +5126,29 @@ function stopScreenShare() {
         screenStream = null;
     }
 
-    // Switch back to the camera for all peers
-    const cameraTrack = localStream.getVideoTracks()[0];
+    // Remove screen tracks from all peer connections
     Object.values(peers).forEach(pc => {
-        const senders = pc.getSenders();
-        const videoSender = senders.find(s => s.track && s.track.kind === 'video');
-        if (videoSender) {
-            videoSender.replaceTrack(cameraTrack);
+        try {
+            const senders = pc.getSenders();
+            senders.forEach(sender => {
+                if (sender.track && sender.track.kind === 'video' && !sender.track.enabled) {
+                    pc.removeTrack(sender);
+                }
+            });
+        } catch (e) {
+            console.error("Error removing screen track:", e);
         }
     });
 
+    // FIXED: Send proper screen sharing stop message
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
             type: 'screen-share-stop',
-            payload: { from: userName }
+            payload: {
+                from: userName
+            }
         }));
     }
-
-    isSharing = false;
-    isScreenSharing = false;
-    document.getElementById('shareScreenBtn').textContent = 'Share Screen';
-    document.getElementById('shareScreenBtn').style.background = '';
-    updateMainVideoArea();
-}
-// --- END OF FIXED BLOCK ---
 
     document.getElementById('screenVideo').classList.add('hidden');
     document.getElementById('screenVideo').srcObject = null;
