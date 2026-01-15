@@ -2320,21 +2320,6 @@ function handleScreenShareStream(payload) {
     }
 }
 
-
-// ✅ FIX: Replace the outgoing video track for all peers (camera <-> screen)
-async function replaceOutgoingVideoForAllPeers(newTrack) {
-    for (const pc of Object.values(peers)) {
-        const sender = pc.getSenders().find(s => s.track && s.track.kind === "video");
-        if (sender) {
-            try {
-                await sender.replaceTrack(newTrack);
-            } catch (e) {
-                console.error("replaceTrack failed:", e);
-            }
-        }
-    }
-}
-
 // FIXED: Chat message sending
 function sendChatMessage() {
     const chatInput = document.getElementById('chatInput');
@@ -4229,21 +4214,13 @@ async function createPeerConnection(peerId) {
         });
     }
 
-    peers[peerId] = pc;
-
-    // ✅ If I am already sharing, ensure this NEW peer immediately receives the screen track
-    if (isSharing && screenStream && screenStream.getVideoTracks().length > 0) {
-        const screenTrack = screenStream.getVideoTracks()[0];
-        const sender = pc.getSenders().find(s => s.track && s.track.kind === "video");
-        if (sender) {
-            try {
-                sender.replaceTrack(screenTrack);
-            } catch (e) {
-                console.error("Failed to replace track for new peer:", e);
-            }
-        }
+    if (screenStream) {
+        screenStream.getTracks().forEach(track => {
+            pc.addTrack(track, screenStream);
+        });
     }
 
+    peers[peerId] = pc;
     return pc;
 }
 
@@ -4938,33 +4915,42 @@ document.getElementById('videoBtn').addEventListener('click', () => {
     toggleLocalVideo();
 });
 
-// FIXED: Screen sharing with proper WebSocket messaging
+// --- FIXED SCREEN SHARING BLOCK ---
 document.getElementById('shareScreenBtn').onclick = async () => {
     if (isSharing) {
-        await stopScreenShare();
+        stopScreenShare();
         return;
     }
 
     try {
+        // 1. Get the screen stream
         screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
 
-        document.getElementById('screenVideo').srcObject = screenStream;
-        document.getElementById('screenVideo').classList.remove('hidden');
+        // 2. Show it on your own screen
+        const screenVideoElement = document.getElementById('screenVideo');
+        if (screenVideoElement) {
+            screenVideoElement.srcObject = screenStream;
+            screenVideoElement.classList.remove('hidden');
+        }
 
-        // Add screen tracks to all peer connections
+        // 3. THE FIX: Instead of adding a new track (which causes black screens), 
+        // we swap the camera track for the screen track in the existing "pipe".
+        const screenTrack = screenStream.getVideoTracks()[0];
+        
         Object.values(peers).forEach(pc => {
-            screenStream.getTracks().forEach(track => {
-                pc.addTrack(track, screenStream);
-            });
+            const senders = pc.getSenders();
+            // Find the sender that is currently handling your camera (video)
+            const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+            if (videoSender) {
+                videoSender.replaceTrack(screenTrack);
+            }
         });
 
-        // FIXED: Send proper screen sharing start message
+        // 4. Notify the WebSocket Server
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({
                 type: 'screen-share-start',
-                payload: {
-                    from: userName
-                }
+                payload: { from: userName }
             }));
         }
 
@@ -4977,9 +4963,8 @@ document.getElementById('shareScreenBtn').onclick = async () => {
 
         updateMainVideoArea();
 
-        screenStream.getTracks()[0].onended = async () => {
-            await stopScreenShare();
-        };
+        // Handle the "Stop Sharing" button in the browser's own popup
+        screenTrack.onended = stopScreenShare;
 
     } catch (e) {
         console.error('Screen share error:', e);
@@ -4987,7 +4972,7 @@ document.getElementById('shareScreenBtn').onclick = async () => {
     }
 };
 
-async function stopScreenShare() {
+function stopScreenShare() {
     if (!isSharing) return;
 
     if (screenStream) {
@@ -4995,15 +4980,30 @@ async function stopScreenShare() {
         screenStream = null;
     }
 
-    // FIXED: Send proper screen sharing stop message
+    // Switch back to the camera for all peers
+    const cameraTrack = localStream.getVideoTracks()[0];
+    Object.values(peers).forEach(pc => {
+        const senders = pc.getSenders();
+        const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+        if (videoSender) {
+            videoSender.replaceTrack(cameraTrack);
+        }
+    });
+
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
             type: 'screen-share-stop',
-            payload: {
-                from: userName
-            }
+            payload: { from: userName }
         }));
     }
+
+    isSharing = false;
+    isScreenSharing = false;
+    document.getElementById('shareScreenBtn').textContent = 'Share Screen';
+    document.getElementById('shareScreenBtn').style.background = '';
+    updateMainVideoArea();
+}
+// --- END OF FIXED BLOCK ---
 
     document.getElementById('screenVideo').classList.add('hidden');
     document.getElementById('screenVideo').srcObject = null;
