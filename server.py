@@ -481,7 +481,6 @@ async def websocket_handler(request):
                     await broadcast_user_list(room)
                     await broadcast_participant_count(room)
 
-                # === FIXED: ADD CHAT MESSAGE HANDLING ===
                 elif msg_type == "chat-message":
                     sender_name = rooms[room]['users'].get(ws_id, {}).get('name', 'Unknown')
                     sender_role = rooms[room]['users'].get(ws_id, {}).get('role', 'participant')
@@ -498,7 +497,6 @@ async def websocket_handler(request):
                     for peer in rooms[room]['websockets']:
                         await peer.send_json({"type": "chat-message", "payload": chat_payload})
 
-                # === FIXED: ADD FILE SHARE HANDLING ===
                 elif msg_type == "file-share":
                     sender_name = rooms[room]['users'].get(ws_id, {}).get('name', 'Unknown')
                     sender_role = rooms[room]['users'].get(ws_id, {}).get('role', 'participant')
@@ -515,6 +513,35 @@ async def websocket_handler(request):
 
                     for peer in rooms[room]['websockets']:
                         await peer.send_json({"type": "file-share", "payload": file_payload})
+
+                # === FIXED: SCREEN SHARING MESSAGES ===
+                elif msg_type == "screen-share-start":
+                    # Add sender info to payload
+                    sender_name = rooms[room]['users'].get(ws_id, {}).get('name', 'Unknown')
+                    screen_payload = payload.copy()
+                    screen_payload['from'] = sender_name
+                    
+                    # Broadcast screen share start to all other participants
+                    for peer in rooms[room]['websockets']:
+                        if peer != ws:
+                            await peer.send_json({"type": "screen-share-start", "payload": screen_payload})
+                        else:
+                            # Also send confirmation to sender
+                            await ws.send_json({"type": "screen-share-start", "payload": {**screen_payload, "self": True}})
+
+                elif msg_type == "screen-share-stop":
+                    # Add sender info to payload
+                    sender_name = rooms[room]['users'].get(ws_id, {}).get('name', 'Unknown')
+                    screen_payload = payload.copy()
+                    screen_payload['from'] = sender_name
+                    
+                    # Broadcast screen share stop to all other participants
+                    for peer in rooms[room]['websockets']:
+                        if peer != ws:
+                            await peer.send_json({"type": "screen-share-stop", "payload": screen_payload})
+                        else:
+                            # Also send confirmation to sender
+                            await ws.send_json({"type": "screen-share-stop", "payload": {**screen_payload, "self": True}})
 
                 elif msg_type in ["offer", "answer", "ice-candidate"]:
                     target = payload.get("target")
@@ -534,7 +561,7 @@ async def websocket_handler(request):
 
                 # === FIXED: BROADCAST ALL OTHER MESSAGE TYPES ===
                 else:
-                    # Broadcast all other message types (screen-share, reactions, etc.) to all participants
+                    # Broadcast all other message types (reactions, etc.) to all participants
                     for peer in rooms[room]['websockets']:
                         if peer != ws:
                             await peer.send_json({"type": msg_type, "payload": payload})
