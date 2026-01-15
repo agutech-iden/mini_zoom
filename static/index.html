@@ -2048,6 +2048,8 @@ let providedHostPassword = '';
 let chatMessages = [];
 let participantHandRaised = {};
 let isParticipantListVisible = false;
+let lastUserList = [];
+let lastHostId = null;
 let isFloatingPanelMinimized = false;
 
 // NEW: Popup visibility states
@@ -2101,7 +2103,8 @@ let oneMinuteWarningShown = false;
 
 // SCREEN SHARING VARIABLES - FIXED
 let isScreenSharing = false;
-let screenSharingUserId = null;
+let screenSharingPeerId = null;
+let screenSharingName = null;
 
 // ========== NETWORK STATUS FUNCTION ==========
 function checkNetworkStatus() {
@@ -2130,7 +2133,7 @@ function logWebRTCStats() {
     console.log("Screen Stream:", screenStream ? "Available" : "Not available");
     console.log("Is Sharing Screen:", isSharing);
     console.log("Is Screen Sharing Active:", isScreenSharing);
-    console.log("Screen Sharing User:", screenSharingUserId);
+    console.log("Screen Sharing User:", screenSharingPeerId);
     console.log("Number of Peer Connections:", Object.keys(peers).length);
     
     if (localStream) {
@@ -2362,35 +2365,46 @@ function handleWebSocketMessage(data) {
 
 // ========== SCREEN SHARING HANDLERS ==========
 function handleScreenShareStart(payload) {
-    console.log('Screen sharing started by:', payload.from);
+    // payload: { from: <peerId>, name: <displayName> }
+    console.log('Screen sharing started by:', payload);
+
     isScreenSharing = true;
-    screenSharingUserId = payload.from;
+    screenSharingPeerId = payload.from || null;
+    screenSharingName = payload.name || payload.from || 'Someone';
 
     // Update UI for all participants
     updateMainVideoArea();
 
-    // Show notification
-    if (payload.from !== userName) {
+    // Chat notification
+    if (payload.from !== myId) {
         appendMessage({
             from: 'System',
-            text: `🖥️ ${payload.from} started screen sharing`
+            text: `🖥️ ${screenSharingName} started screen sharing`
         });
     }
 }
 
-function handleScreenShareStop(payload) {
-    console.log('Screen sharing stopped by:', payload.from);
-    isScreenSharing = false;
-    screenSharingUserId = null;
 
-    // Update UI for all participants
+function handleScreenShareStop(payload) {
+    console.log('Screen sharing stopped by:', payload);
+
+    isScreenSharing = false;
+    screenSharingPeerId = null;
+    screenSharingName = null;
+
+    const screenVideo = document.getElementById('screenVideo');
+    if (screenVideo) {
+        screenVideo.srcObject = null;
+        screenVideo.classList.add('hidden');
+    }
+
     updateMainVideoArea();
 
-    // Show notification
-    if (payload.from !== userName) {
+    if (payload.from !== myId) {
+        const name = payload.name || 'Someone';
         appendMessage({
             from: 'System',
-            text: `🖥️ ${payload.from} stopped screen sharing`
+            text: `🖥️ ${name} stopped screen sharing`
         });
     }
 }
@@ -4285,21 +4299,25 @@ async function createPeerConnection(peerId) {
     };
 
     pc.ontrack = (event) => {
-        console.log('Received track from peer:', peerId, event.track.kind);
         const remoteVideo = document.getElementById(`remote-${peerId}`) || createRemoteVideo(peerId);
-        
+
         if (event.streams && event.streams[0]) {
             remoteVideo.srcObject = event.streams[0];
-            
-            // If this is a screen sharing stream, handle it specially
-            if (event.track.kind === 'video' && isScreenSharing) {
-                console.log('Screen sharing stream received from:', peerId);
+            remoteVideo.autoplay = true;
+            remoteVideo.playsInline = true;
+            remoteVideo.muted = false;
+            remoteVideo.play().catch(() => {});
+
+            // If someone is screen sharing, show the sharer's incoming stream in the screenVideo area
+            if (isScreenSharing && screenSharingPeerId && peerId === screenSharingPeerId) {
                 const screenVideo = document.getElementById('screenVideo');
-                screenVideo.srcObject = event.streams[0];
-                screenVideo.classList.remove('hidden');
-                updateMainVideoArea();
+                if (screenVideo) {
+                    screenVideo.srcObject = event.streams[0];
+                    screenVideo.classList.remove('hidden');
+                    screenVideo.play().catch(() => {});
+                }
             }
-            
+
             setTimeout(() => updateMainVideoArea(), 100);
         }
     };
@@ -4338,13 +4356,6 @@ async function createPeerConnection(peerId) {
         });
     }
 
-    // Add screen sharing track if available
-    if (screenStream && isSharing) {
-        screenStream.getTracks().forEach(track => {
-            pc.addTrack(track, screenStream);
-        });
-    }
-
     // Store peerId on the connection for reference
     pc.peerId = peerId;
 
@@ -4359,7 +4370,7 @@ function logWebRTCStats() {
     console.log("Screen Stream:", screenStream ? "Available" : "Not available");
     console.log("Is Sharing Screen:", isSharing);
     console.log("Is Screen Sharing Active:", isScreenSharing);
-    console.log("Screen Sharing User:", screenSharingUserId);
+    console.log("Screen Sharing User:", screenSharingPeerId);
     console.log("Number of Peer Connections:", Object.keys(peers).length);
     
     if (localStream) {
@@ -4508,7 +4519,35 @@ async function joinRoom(roomCode, scheduledDateTime = null, skipTimeCheck = fals
         initializeMeetingTimer(currentMeetingInfo.endTime);
     }
 
-    const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    
+    // --- Get camera/mic BEFORE WebSocket so offers include tracks ---
+try {
+        const audioConstraints = {
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                sampleRate: 44100,
+                channelCount: 2
+            },
+            video: true
+        };
+
+        localStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+        document.getElementById('localVideo').srcObject = localStream;
+
+        await initializeAudioContext();
+        setupAudioMonitoring(localStream);
+
+        updateMainVideoArea();
+
+    } catch (err) {
+        console.log("Camera/microphone access denied:", err);
+        alert("📹 Please allow camera and microphone access for the best experience.");
+    }
+
+    
+const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
     ws = new WebSocket(`${scheme}://${window.location.host}/ws/${roomCode}`);
 
     ws.onopen = () => {
@@ -4577,7 +4616,10 @@ async function joinRoom(roomCode, scheduledDateTime = null, skipTimeCheck = fals
 
             case 'hand-raised':
                 participantHandRaised[payload.userId] = payload.raised;
-                updateParticipantList(payload.users || [], payload.host);
+                // Re-render using the last known user list (don't wipe the grid)
+                if (lastUserList && lastUserList.length) {
+                    updateParticipantList(lastUserList, lastHostId);
+                }
                 break;
 
             case 'message-deleted':
@@ -4594,7 +4636,9 @@ async function joinRoom(roomCode, scheduledDateTime = null, skipTimeCheck = fals
                 break;
 
             case 'user-list':
-                updateParticipantList(payload.users, payload.host);
+                lastUserList = payload.users || [];
+                lastHostId = payload.host;
+                updateParticipantList(lastUserList, lastHostId);
                 const found = payload.users.find(u => u.name === userName);
                 if (found) myId = found.id;
 
@@ -4670,31 +4714,6 @@ async function joinRoom(roomCode, scheduledDateTime = null, skipTimeCheck = fals
                 break;
         }
     };
-
-    try {
-        const audioConstraints = {
-            audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-                sampleRate: 44100,
-                channelCount: 2
-            },
-            video: true
-        };
-
-        localStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
-        document.getElementById('localVideo').srcObject = localStream;
-
-        await initializeAudioContext();
-        setupAudioMonitoring(localStream);
-
-        updateMainVideoArea();
-
-    } catch (err) {
-        console.log("Camera/microphone access denied:", err);
-        alert("📹 Please allow camera and microphone access for the best experience.");
-    }
 
     if (isHost || isCoHost) {
         document.getElementById('hostControlsBtn').classList.remove('hidden');
@@ -5092,110 +5111,127 @@ document.getElementById('videoBtn').addEventListener('click', () => {
     toggleLocalVideo();
 });
 
-// FIXED: Screen sharing with proper WebRTC renegotiation
-document.getElementById('shareScreenBtn').onclick = async () => {
-    if (isSharing) {
-        stopScreenShare();
+// FIXED: Screen sharing (Host, Co-Host, and Participants)
+//
+// We do NOT add a second video track (which causes black/frozen video).
+// Instead, we replace the existing outgoing video track for each peer.
+async function replaceOutgoingVideoForAllPeers(newTrack) {
+    for (const pc of Object.values(peers)) {
+        const sender = pc.getSenders().find(s => s.track && s.track.kind === "video");
+        if (sender) {
+            await sender.replaceTrack(newTrack);
+        }
+    }
+}
+
+async function startScreenShare() {
+    if (isSharing) return;
+    if (!localStream) {
+        alert("Please allow camera and microphone first, then try screen sharing again.");
         return;
     }
 
-    try {
-        screenStream = await navigator.mediaDevices.getDisplayMedia({ 
-            video: { 
-                cursor: "always",
-                displaySurface: "monitor"
-            },
-            audio: false
-        });
+    screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: false
+    });
 
-        document.getElementById('screenVideo').srcObject = screenStream;
-        document.getElementById('screenVideo').classList.remove('hidden');
+    const screenTrack = screenStream.getVideoTracks()[0];
 
-        // Add screen tracks to all existing peer connections
-        Object.values(peers).forEach(pc => {
-            screenStream.getTracks().forEach(track => {
-                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                if (sender) {
-                    sender.replaceTrack(track);
-                } else {
-                    pc.addTrack(track, screenStream);
-                }
-            });
-            
-            // Trigger renegotiation
-            setTimeout(() => makeOffer(pc.peerId), 100);
-        });
-
-        // FIXED: Send proper screen sharing start message
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({
-                type: 'screen-share-start',
-                payload: {
-                    from: userName
-                }
-            }));
-        }
-
-        isSharing = true;
-        isScreenSharing = true;
-        screenSharingUserId = userName;
-
-        document.getElementById('shareScreenBtn').textContent = 'Stop Sharing';
-        document.getElementById('shareScreenBtn').style.background = '#d32f2f';
-
-        updateMainVideoArea();
-
-        screenStream.getTracks()[0].onended = stopScreenShare;
-
-    } catch (e) {
-        console.error('Screen share error:', e);
-        alert('Could not share screen. Please try again.');
+    // Local preview for the sharer
+    const screenVideoEl = document.getElementById('screenVideo');
+    if (screenVideoEl) {
+        screenVideoEl.srcObject = screenStream;
+        screenVideoEl.classList.remove('hidden');
+        screenVideoEl.play().catch(() => {});
     }
-};
 
-function stopScreenShare() {
+    await replaceOutgoingVideoForAllPeers(screenTrack);
+
+    // Notify others using peerId (so we can map to the correct incoming stream)
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            type: 'screen-share-start',
+            payload: {
+                from: (myId || getCurrentUserId()),
+                name: userName
+            }
+        }));
+    }
+
+    isSharing = true;
+    isScreenSharing = true;
+    screenSharingPeerId = (myId || getCurrentUserId());
+    screenSharingName = userName;
+
+    const btn = document.getElementById('shareScreenBtn');
+    if (btn) {
+        btn.textContent = 'Stop Sharing';
+        btn.style.background = '#d32f2f';
+    }
+
+    updateMainVideoArea();
+
+    screenTrack.onended = () => stopScreenShare();
+}
+
+async function stopScreenShare() {
     if (!isSharing) return;
+
+    const camTrack = localStream && localStream.getVideoTracks()[0];
+    if (camTrack) {
+        await replaceOutgoingVideoForAllPeers(camTrack);
+    }
 
     if (screenStream) {
         screenStream.getTracks().forEach(track => track.stop());
         screenStream = null;
     }
 
-    // Remove screen tracks from all peer connections
-    Object.values(peers).forEach(pc => {
-        try {
-            const senders = pc.getSenders();
-            senders.forEach(sender => {
-                if (sender.track && sender.track.kind === 'video' && !sender.track.enabled) {
-                    pc.removeTrack(sender);
-                }
-            });
-        } catch (e) {
-            console.error("Error removing screen track:", e);
-        }
-    });
-
-    // FIXED: Send proper screen sharing stop message
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
             type: 'screen-share-stop',
             payload: {
-                from: userName
+                from: (myId || getCurrentUserId()),
+                name: userName
             }
         }));
     }
 
-    document.getElementById('screenVideo').classList.add('hidden');
-    document.getElementById('screenVideo').srcObject = null;
-    document.getElementById('shareScreenBtn').textContent = 'Share Screen';
-    document.getElementById('shareScreenBtn').style.background = '#4caf50';
+    const screenVideoEl = document.getElementById('screenVideo');
+    if (screenVideoEl) {
+        screenVideoEl.classList.add('hidden');
+        screenVideoEl.srcObject = null;
+    }
+
+    const btn = document.getElementById('shareScreenBtn');
+    if (btn) {
+        btn.textContent = 'Share Screen';
+        btn.style.background = '#4caf50';
+    }
 
     isSharing = false;
     isScreenSharing = false;
-    screenSharingUserId = null;
+    screenSharingPeerId = null;
+    screenSharingName = null;
 
     updateMainVideoArea();
 }
+
+// Toggle screen share
+document.getElementById('shareScreenBtn').onclick = async () => {
+    try {
+        if (isSharing) {
+            await stopScreenShare();
+        } else {
+            await startScreenShare();
+        }
+    } catch (e) {
+        console.error('Screen share error:', e);
+        alert('Could not share screen. Please try again.');
+    }
+};
+
 
 // Chat controls
 document.getElementById('chatToggleBtn').addEventListener('click', () => {
