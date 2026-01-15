@@ -12,14 +12,24 @@ import base64
 
 # --- FOLDERS ---
 STATIC_DIR = "static"
-UPLOAD_DIR = "uploads"
-RECORDING_DIR = "recordings"
-os.makedirs(STATIC_DIR, exist_ok=True)
+
+# Render's filesystem is ephemeral unless you attach a persistent disk.
+# If you add a Render Disk mounted at /var/data, this will keep user accounts and uploads between deploys.
+DATA_DIR = os.environ.get("RENDER_DISK_MOUNT_DIR") or os.environ.get("DATA_DIR") or os.environ.get("RENDER_DATA_DIR")
+if DATA_DIR:
+    os.makedirs(DATA_DIR, exist_ok=True)
+    UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
+    RECORDING_DIR = os.path.join(DATA_DIR, "recordings")
+    DB_FILE = os.path.join(DATA_DIR, "database.db")
+else:
+    UPLOAD_DIR = "uploads"
+    RECORDING_DIR = "recordings"
+    DB_FILE = "database.db"
+
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(RECORDING_DIR, exist_ok=True)
 
 # --- DATABASE SETUP ---
-DB_FILE = "database.db"
 
 
 def init_db():
