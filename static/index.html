@@ -2320,6 +2320,21 @@ function handleScreenShareStream(payload) {
     }
 }
 
+
+// ✅ FIX: Replace the outgoing video track for all peers (camera <-> screen)
+async function replaceOutgoingVideoForAllPeers(newTrack) {
+    for (const pc of Object.values(peers)) {
+        const sender = pc.getSenders().find(s => s.track && s.track.kind === "video");
+        if (sender) {
+            try {
+                await sender.replaceTrack(newTrack);
+            } catch (e) {
+                console.error("replaceTrack failed:", e);
+            }
+        }
+    }
+}
+
 // FIXED: Chat message sending
 function sendChatMessage() {
     const chatInput = document.getElementById('chatInput');
@@ -4214,13 +4229,21 @@ async function createPeerConnection(peerId) {
         });
     }
 
-    if (screenStream) {
-        screenStream.getTracks().forEach(track => {
-            pc.addTrack(track, screenStream);
-        });
+    peers[peerId] = pc;
+
+    // ✅ If I am already sharing, ensure this NEW peer immediately receives the screen track
+    if (isSharing && screenStream && screenStream.getVideoTracks().length > 0) {
+        const screenTrack = screenStream.getVideoTracks()[0];
+        const sender = pc.getSenders().find(s => s.track && s.track.kind === "video");
+        if (sender) {
+            try {
+                sender.replaceTrack(screenTrack);
+            } catch (e) {
+                console.error("Failed to replace track for new peer:", e);
+            }
+        }
     }
 
-    peers[peerId] = pc;
     return pc;
 }
 
@@ -4918,7 +4941,7 @@ document.getElementById('videoBtn').addEventListener('click', () => {
 // FIXED: Screen sharing with proper WebSocket messaging
 document.getElementById('shareScreenBtn').onclick = async () => {
     if (isSharing) {
-        stopScreenShare();
+        await stopScreenShare();
         return;
     }
 
@@ -4954,7 +4977,9 @@ document.getElementById('shareScreenBtn').onclick = async () => {
 
         updateMainVideoArea();
 
-        screenStream.getTracks()[0].onended = stopScreenShare;
+        screenStream.getTracks()[0].onended = async () => {
+            await stopScreenShare();
+        };
 
     } catch (e) {
         console.error('Screen share error:', e);
@@ -4962,7 +4987,7 @@ document.getElementById('shareScreenBtn').onclick = async () => {
     }
 };
 
-function stopScreenShare() {
+async function stopScreenShare() {
     if (!isSharing) return;
 
     if (screenStream) {
